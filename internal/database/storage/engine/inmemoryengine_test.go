@@ -2,7 +2,6 @@ package engine
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,7 +14,6 @@ func Test_NewInMemoryEngine(t *testing.T) {
 		testName string
 
 		logger *zap.Logger
-		size   uint
 
 		expectedNilObj bool
 		expectedErr    error
@@ -26,7 +24,6 @@ func Test_NewInMemoryEngine(t *testing.T) {
 			testName: "Correct engine",
 
 			logger: &zap.Logger{},
-			size:   1000,
 
 			expectedNilObj: false,
 			expectedErr:    nil,
@@ -35,25 +32,15 @@ func Test_NewInMemoryEngine(t *testing.T) {
 		{
 			testName: "Engine without logger",
 			logger:   nil,
-			size:     1000,
 
 			expectedNilObj: true,
 			expectedErr:    errors.New("engine without logger"),
-		},
-
-		{
-			testName: "Engine with size greater than max",
-			logger:   &zap.Logger{},
-			size:     1000000,
-
-			expectedNilObj: true,
-			expectedErr:    fmt.Errorf("engine could not be bigger than %d elements", maxEngineSize),
 		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.testName, func(t *testing.T) {
-			engine, err := NewInMemoryEngine(test.logger, test.size)
+			engine, err := NewInMemoryEngine(test.logger)
 
 			assert.Equal(t, test.expectedErr, err)
 
@@ -74,8 +61,6 @@ func Test_SetEngine(t *testing.T) {
 		key   string
 		value string
 
-		engineSize uint
-
 		expectedErr error
 	}
 
@@ -86,26 +71,13 @@ func Test_SetEngine(t *testing.T) {
 			key:   "Qwerty",
 			value: "Asdfgh",
 
-			engineSize: 1000,
-
 			expectedErr: nil,
-		},
-
-		{
-			testName: "Set value in uncorrect engine",
-
-			key:   "Qwerty",
-			value: "Asdfgh",
-
-			engineSize: 0,
-
-			expectedErr: errors.New("engine is empty"),
 		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.testName, func(t *testing.T) {
-			engine, _ := NewInMemoryEngine(zap.NewNop(), test.engineSize)
+			engine, _ := NewInMemoryEngine(zap.NewNop())
 
 			err := engine.SET(test.key, test.value)
 
@@ -124,8 +96,6 @@ func Test_GetEngine(t *testing.T) {
 
 		setValue string
 
-		engineSize int
-
 		expectedValue string
 		expectedErr   error
 	}
@@ -140,8 +110,6 @@ func Test_GetEngine(t *testing.T) {
 			setValue:      "Qwerty",
 			expectedValue: "Qwerty",
 
-			engineSize: 1000,
-
 			expectedErr: nil,
 		},
 
@@ -154,31 +122,16 @@ func Test_GetEngine(t *testing.T) {
 			setValue:      "Qwerty",
 			expectedValue: "",
 
-			engineSize: 1000,
-
 			expectedErr: errors.New("value not found"),
-		},
-
-		{
-			name: "Get value from empty engine",
-
-			getKey:        "Zxcvbn",
-			expectedValue: "",
-
-			engineSize: 0,
-
-			expectedErr: errors.New("engine is empty"),
 		},
 	}
 
 	for _, test := range testCases {
 
 		t.Run(test.name, func(t *testing.T) {
-			engine, _ := NewInMemoryEngine(zap.NewNop(), uint(test.engineSize))
+			engine, _ := NewInMemoryEngine(zap.NewNop())
 
-			if test.engineSize < maxEngineSize {
-				engine.SET(test.setKey, test.setValue)
-			}
+			engine.SET(test.setKey, test.setValue)
 
 			actualValue, actualErr := engine.GET(test.getKey)
 
@@ -198,8 +151,6 @@ func Test_DelEngine(t *testing.T) {
 
 		delKey string
 
-		engineSize int
-
 		expectedErr error
 	}
 
@@ -212,8 +163,6 @@ func Test_DelEngine(t *testing.T) {
 
 			delKey: "Qwerty",
 
-			engineSize: 1000,
-
 			expectedErr: nil,
 		},
 
@@ -225,32 +174,15 @@ func Test_DelEngine(t *testing.T) {
 
 			delKey: "Poiu",
 
-			engineSize: 1000,
-
 			expectedErr: nil,
-		},
-
-		{
-			name: "Delete key from empty engine",
-
-			setKey:   "Qwerty",
-			setValue: "ASDFG",
-
-			delKey: "Poiu",
-
-			engineSize: 0,
-
-			expectedErr: errors.New("engine is empty"),
 		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			engine, _ := NewInMemoryEngine(zap.NewNop(), uint(test.engineSize))
+			engine, _ := NewInMemoryEngine(zap.NewNop())
 
-			if test.engineSize < maxEngineSize {
-				engine.SET(test.setKey, test.setValue)
-			}
+			engine.SET(test.setKey, test.setValue)
 
 			actualErr := engine.DEL(test.delKey)
 

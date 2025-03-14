@@ -2,15 +2,17 @@ package storage
 
 import (
 	"errors"
-	"inmemorykvdb/internal/commands"
-	"inmemorykvdb/internal/engine"
+	"inmemorykvdb/internal/database/commands"
+	"inmemorykvdb/internal/database/storage/engine"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
 
-func Test_NewSimpleStorage(t *testing.T) {
+func Test_NewStorage(t *testing.T) {
+
+	t.Parallel()
 
 	type testCase struct {
 		name string
@@ -63,22 +65,24 @@ func Test_NewSimpleStorage(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 
-			var testEngine engine.Engine
+			var testEngine engineLayer
 
 			if test.nilEngine {
 				testEngine = nil
 			} else {
-				testEngine, _ = engine.NewInMemoryEngine(zap.NewNop(), 1000)
+				testEngine, _ = engine.NewInMemoryEngine(zap.NewNop())
 			}
 
-			_, err := NewSimpleStorage(testEngine, test.logger)
+			_, err := NewStorage(testEngine, test.logger)
 
 			assert.Equal(t, test.expectedErr, err)
 		})
 	}
 }
 
-func Test_SimpleStorage(t *testing.T) {
+func Test_HandleRequest(t *testing.T) {
+
+	t.Parallel()
 
 	type testCase struct {
 		name string
@@ -133,14 +137,14 @@ func Test_SimpleStorage(t *testing.T) {
 		},
 	}
 
-	testEngine, _ := engine.NewInMemoryEngine(zap.NewNop(), 1000)
+	testEngine, _ := engine.NewInMemoryEngine(zap.NewNop())
 
-	storage, _ := NewSimpleStorage(testEngine, zap.NewNop())
+	storage, _ := NewStorage(testEngine, zap.NewNop())
 
 	for _, test := range testCases {
 
 		t.Run(test.name, func(t *testing.T) {
-			actualValue, actualErr := storage.Request(test.requestType, test.args...)
+			actualValue, actualErr := storage.HandleRequest(test.requestType, test.args...)
 
 			assert.Equal(t, test.expectStr, actualValue)
 			assert.Equal(t, test.expectedErr, actualErr)

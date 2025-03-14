@@ -3,75 +3,94 @@ package cli
 import (
 	"bufio"
 	"fmt"
-	"inmemorykvdb/internal/compute"
 	"inmemorykvdb/internal/database"
-	"inmemorykvdb/internal/engine"
-	"inmemorykvdb/internal/storage"
+	"inmemorykvdb/internal/database/compute"
+	"inmemorykvdb/internal/database/storage"
+	"inmemorykvdb/internal/database/storage/engine"
 	"os"
 
 	"go.uber.org/zap"
 )
 
+type Database interface {
+	HandleRequest(data string) (string, error)
+}
+
 func Run() {
+
 	in := bufio.NewReader(os.Stdin)
 
-	var engineSize uint
-
-	fmt.Print("Enter your db size: ")
-	fmt.Fscanln(os.Stdin, &engineSize)
-
-	engine, err := engine.NewInMemoryEngine(zap.NewNop(), engineSize)
+	db, err := BuildDatabase()
 
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 
-	storage, err := storage.NewSimpleStorage(engine, zap.NewNop())
+	for {
+
+		req, err := ReadRequest(in)
+
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+
+		resp, err := db.HandleRequest(req)
+
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+
+		WriteResponse(resp)
+	}
+}
+
+func BuildDatabase() (Database, error) {
+	engine, err := engine.NewInMemoryEngine(zap.NewNop())
 
 	if err != nil {
-		fmt.Println(err.Error())
-		return
+		return nil, err
 	}
 
-	compute, err := compute.NewSimpleCompute(zap.NewNop())
+	storage, err := storage.NewStorage(engine, zap.NewNop())
 
 	if err != nil {
-		fmt.Println(err.Error())
-		return
+		return nil, err
+	}
+
+	compute, err := compute.NewCompute(zap.NewNop())
+
+	if err != nil {
+		return nil, err
 	}
 
 	db, err := database.NewInMemoryKvDb(compute, storage, zap.NewNop())
 
 	if err != nil {
-		fmt.Println(err.Error())
-		return
+		return nil, err
 	}
 
-	var req string
-	var resp string
+	return db, err
+}
 
-	for {
+func ReadRequest(in *bufio.Reader) (string, error) {
 
-		fmt.Print("ENTER COMMAND: ")
-		req, err = in.ReadString('\n')
+	fmt.Print("ENTER COMMAND: ")
+	req, err := in.ReadString('\n')
 
-		if err != nil {
-			fmt.Println(err.Error())
-			continue
-		}
+	if err != nil {
+		return "", err
+	}
 
-		resp, err = db.Request(req)
+	return req, nil
+}
 
-		if err != nil {
-			fmt.Println(err.Error())
-			continue
-		}
-
-		if resp == "" {
-			fmt.Println("OK")
-		} else {
-			fmt.Println("RESPONSE IS:", resp)
-		}
+func WriteResponse(resp string) {
+	if resp == "" {
+		fmt.Println("OK")
+	} else {
+		fmt.Println("RESPONSE IS:", resp)
 	}
 }

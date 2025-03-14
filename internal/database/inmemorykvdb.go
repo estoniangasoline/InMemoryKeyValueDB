@@ -2,19 +2,25 @@ package database
 
 import (
 	"errors"
-	"inmemorykvdb/internal/compute"
-	"inmemorykvdb/internal/storage"
 
 	"go.uber.org/zap"
 )
 
+type computeLayer interface {
+	Parse(data string) (int, []string, error)
+}
+
+type storageLayer interface {
+	HandleRequest(requestType int, arg ...string) (string, error)
+}
+
 type InMemoryKeyValueDatabase struct {
-	compute compute.Compute
-	storage storage.Storage
+	compute computeLayer
+	storage storageLayer
 	logger  *zap.Logger
 }
 
-func NewInMemoryKvDb(compute compute.Compute, storage storage.Storage, logger *zap.Logger) (Database, error) {
+func NewInMemoryKvDb(compute computeLayer, storage storageLayer, logger *zap.Logger) (*InMemoryKeyValueDatabase, error) {
 
 	if compute == nil || storage == nil || logger == nil {
 		return nil, errors.New("could not to create db without any of arguments")
@@ -23,11 +29,10 @@ func NewInMemoryKvDb(compute compute.Compute, storage storage.Storage, logger *z
 	return &InMemoryKeyValueDatabase{compute: compute, storage: storage, logger: logger}, nil
 }
 
-func (db *InMemoryKeyValueDatabase) Request(data string) (string, error) {
+func (db *InMemoryKeyValueDatabase) HandleRequest(data string) (string, error) {
 
-	db.logger.Debug("request started")
+	db.logger.Debug("request started, send data to compute")
 
-	db.logger.Debug("send data to compute")
 	command, args, err := db.compute.Parse(data)
 	db.logger.Debug("data parsed")
 
@@ -37,7 +42,7 @@ func (db *InMemoryKeyValueDatabase) Request(data string) (string, error) {
 	}
 
 	db.logger.Debug("send request to storage")
-	resp, err := db.storage.Request(command, args...)
+	resp, err := db.storage.HandleRequest(command, args...)
 	db.logger.Debug("storage returned a response")
 
 	if err != nil {

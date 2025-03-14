@@ -2,7 +2,7 @@ package compute
 
 import (
 	"errors"
-	"inmemorykvdb/internal/commands"
+	"inmemorykvdb/internal/database/commands"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,7 +45,7 @@ func Test_NewSimpleCompute(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 
-			compute, err := NewSimpleCompute(test.logger)
+			compute, err := NewCompute(test.logger)
 
 			assert.Equal(t, test.expectedErr, err)
 
@@ -178,19 +178,19 @@ func Test_Parse(t *testing.T) {
 
 			data: "DEL",
 
-			expectedCommand:   commands.UncorrectCommand,
-			expectedArguments: []string{},
+			expectedCommand:   commands.IncorrectCommand,
+			expectedArguments: nil,
 			expectedErr:       errors.New("could not to parse less than two arguments"),
 		},
 
 		{
-			name: "unknown commands",
+			name: "incorrect commands",
 
 			data: "LOL boba",
 
-			expectedCommand:   commands.UncorrectCommand,
-			expectedArguments: []string{},
-			expectedErr:       errors.New("unknown command"),
+			expectedCommand:   commands.IncorrectCommand,
+			expectedArguments: nil,
+			expectedErr:       errors.New("incorrect command"),
 		},
 
 		{
@@ -198,13 +198,13 @@ func Test_Parse(t *testing.T) {
 
 			data: "SET POP",
 
-			expectedCommand:   commands.UncorrectCommand,
-			expectedArguments: []string{},
-			expectedErr:       errors.New("set command could not be realized with one argument"),
+			expectedCommand:   commands.SetCommand,
+			expectedArguments: nil,
+			expectedErr:       errors.New("set command has two arguments"),
 		},
 
 		{
-			name: "request with end trash",
+			name: "request with end enter symbols",
 
 			data: "set biba boba\r\n",
 
@@ -214,7 +214,7 @@ func Test_Parse(t *testing.T) {
 		},
 	}
 
-	compute, _ := NewSimpleCompute(zap.NewNop())
+	compute, _ := NewCompute(zap.NewNop())
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
@@ -222,6 +222,157 @@ func Test_Parse(t *testing.T) {
 
 			assert.Equal(t, test.expectedCommand, command)
 			assert.Equal(t, test.expectedArguments, args)
+			assert.Equal(t, test.expectedErr, err)
+		})
+	}
+}
+
+func Test_parseCommands(t *testing.T) {
+
+	type testCase struct {
+		name string
+
+		stringCommand string
+
+		expectedParsedCommand int
+		expectedErr           error
+	}
+
+	testCases := []testCase{
+		{
+			name: "set command",
+
+			stringCommand: "set",
+
+			expectedParsedCommand: commands.SetCommand,
+			expectedErr:           nil,
+		},
+
+		{
+			name: "get command",
+
+			stringCommand: "GET",
+
+			expectedParsedCommand: commands.GetCommand,
+			expectedErr:           nil,
+		},
+
+		{
+			name: "del command",
+
+			stringCommand: "deL",
+
+			expectedParsedCommand: commands.DelCommand,
+			expectedErr:           nil,
+		},
+
+		{
+			name: "incorrect command",
+
+			stringCommand: "barkhat",
+
+			expectedParsedCommand: commands.IncorrectCommand,
+			expectedErr:           errors.New("incorrect command"),
+		},
+	}
+
+	compute, _ := NewCompute(zap.NewNop())
+
+	for _, test := range testCases {
+
+		t.Run(test.name, func(t *testing.T) {
+
+			parsedCommand, err := compute.parseCommand(test.stringCommand)
+
+			assert.Equal(t, test.expectedParsedCommand, parsedCommand)
+			assert.Equal(t, test.expectedErr, err)
+		})
+	}
+}
+
+func Test_parseArguments(t *testing.T) {
+
+	type testCase struct {
+		name string
+
+		command   int
+		arguments []string
+
+		expectedParsedArgs []string
+		expectedErr        error
+	}
+
+	testCases := []testCase{
+		{
+			name: "correct set request",
+
+			command:   commands.SetCommand,
+			arguments: []string{"biba", "boba"},
+
+			expectedParsedArgs: []string{"biba", "boba"},
+			expectedErr:        nil,
+		},
+
+		{
+			name: "correct get request",
+
+			command:   commands.GetCommand,
+			arguments: []string{"biba"},
+
+			expectedParsedArgs: []string{"biba"},
+			expectedErr:        nil,
+		},
+
+		{
+			name: "correct del request",
+
+			command:   commands.DelCommand,
+			arguments: []string{"biba"},
+
+			expectedParsedArgs: []string{"biba"},
+			expectedErr:        nil,
+		},
+
+		{
+			name: "correct del request with enter symbols",
+
+			command:   commands.DelCommand,
+			arguments: []string{"biba\r\n"},
+
+			expectedParsedArgs: []string{"biba"},
+			expectedErr:        nil,
+		},
+
+		{
+			name: "uncorrect set request",
+
+			command:   commands.SetCommand,
+			arguments: []string{"biba\r\n"},
+
+			expectedParsedArgs: nil,
+			expectedErr:        errors.New("set command has two arguments"),
+		},
+
+		{
+			name: "uncorrect set request with enter symbols as last args",
+
+			command:   commands.SetCommand,
+			arguments: []string{"biba", "\r\n"},
+
+			expectedParsedArgs: nil,
+			expectedErr:        errors.New("set command has two arguments"),
+		},
+	}
+
+	compute, _ := NewCompute(zap.NewNop())
+
+	for _, test := range testCases {
+
+		t.Run(test.name, func(t *testing.T) {
+
+			parsedArgs, err := compute.parseArguments(test.command, test.arguments)
+
+			assert.Equal(t, test.expectedParsedArgs, parsedArgs)
 			assert.Equal(t, test.expectedErr, err)
 		})
 	}

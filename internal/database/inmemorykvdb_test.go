@@ -2,20 +2,18 @@ package database
 
 import (
 	"errors"
-	"inmemorykvdb/internal/compute"
-	"inmemorykvdb/internal/engine"
-	"inmemorykvdb/internal/storage"
+	"inmemorykvdb/internal/database/compute"
+	"inmemorykvdb/internal/database/storage"
+	"inmemorykvdb/internal/database/storage/engine"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
 
-const (
-	engineSize = 10000
-)
-
 func Test_NewInMemoryKvDb(t *testing.T) {
+
+	t.Parallel()
 
 	type testCase struct {
 		name string
@@ -88,17 +86,16 @@ func Test_NewInMemoryKvDb(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 
-			var stor storage.Storage
-			var comp compute.Compute
-
-			eng, _ := engine.NewInMemoryEngine(zap.NewNop(), engineSize)
+			var stor storageLayer
+			var comp computeLayer
 
 			if !test.nilStorage {
-				stor, _ = storage.NewSimpleStorage(eng, zap.NewNop())
+				eng, _ := engine.NewInMemoryEngine(zap.NewNop())
+				stor, _ = storage.NewStorage(eng, zap.NewNop())
 			}
 
 			if !test.nilCompute {
-				comp, _ = compute.NewSimpleCompute(zap.NewNop())
+				comp, _ = compute.NewCompute(zap.NewNop())
 			}
 
 			db, err := NewInMemoryKvDb(comp, stor, test.logger)
@@ -115,6 +112,8 @@ func Test_NewInMemoryKvDb(t *testing.T) {
 }
 
 func Test_Request(t *testing.T) {
+
+	t.Parallel()
 
 	type testCase struct {
 		name string
@@ -159,6 +158,14 @@ func Test_Request(t *testing.T) {
 			expectedErr:  nil,
 		},
 		{
+			name: "another correct set request",
+
+			data: "set boba biba",
+
+			expectedResp: "",
+			expectedErr:  nil,
+		},
+		{
 			name: "get request to check is deleted",
 
 			data: "GEt biba",
@@ -175,26 +182,26 @@ func Test_Request(t *testing.T) {
 			expectedErr:  nil,
 		},
 		{
-			name: "uncorrect request",
+			name: "incorrect request",
 
 			data: "yo yo",
 
 			expectedResp: "",
-			expectedErr:  errors.New("unknown command"),
+			expectedErr:  errors.New("incorrect command"),
 		},
 	}
 
-	eng, _ := engine.NewInMemoryEngine(zap.NewNop(), engineSize)
-	stor, _ := storage.NewSimpleStorage(eng, zap.NewNop())
+	eng, _ := engine.NewInMemoryEngine(zap.NewNop())
+	stor, _ := storage.NewStorage(eng, zap.NewNop())
 
-	comp, _ := compute.NewSimpleCompute(zap.NewNop())
+	comp, _ := compute.NewCompute(zap.NewNop())
 
 	db, _ := NewInMemoryKvDb(comp, stor, zap.NewNop())
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 
-			resp, err := db.Request(test.data)
+			resp, err := db.HandleRequest(test.data)
 
 			assert.Equal(t, test.expectedResp, resp)
 			assert.Equal(t, test.expectedErr, err)

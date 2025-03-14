@@ -2,18 +2,23 @@ package storage
 
 import (
 	"errors"
-	"inmemorykvdb/internal/commands"
-	"inmemorykvdb/internal/engine"
+	"inmemorykvdb/internal/database/commands"
 
 	"go.uber.org/zap"
 )
 
-type SimpleStorage struct {
-	Engine engine.Engine
+type engineLayer interface {
+	SET(key string, value string) error
+	GET(key string) (string, error)
+	DEL(key string) error
+}
+
+type Storage struct {
+	Engine engineLayer
 	logger *zap.Logger
 }
 
-func (s *SimpleStorage) Request(requestType int, arg ...string) (string, error) {
+func (s *Storage) HandleRequest(requestType int, arg ...string) (string, error) {
 
 	switch requestType {
 
@@ -35,19 +40,19 @@ func (s *SimpleStorage) Request(requestType int, arg ...string) (string, error) 
 	}
 }
 
-func (s *SimpleStorage) Set(key string, value string) error {
+func (s *Storage) Set(key string, value string) error {
 	return s.Engine.SET(key, value)
 }
 
-func (s *SimpleStorage) Get(key string) (string, error) {
+func (s *Storage) Get(key string) (string, error) {
 	return s.Engine.GET(key)
 }
 
-func (s *SimpleStorage) Del(key string) error {
+func (s *Storage) Del(key string) error {
 	return s.Engine.DEL(key)
 }
 
-func NewSimpleStorage(engine engine.Engine, logger *zap.Logger) (Storage, error) {
+func NewStorage(engine engineLayer, logger *zap.Logger) (*Storage, error) {
 
 	if engine == nil && logger == nil {
 		return nil, errors.New("could not create storage without engine and logger")
@@ -61,5 +66,5 @@ func NewSimpleStorage(engine engine.Engine, logger *zap.Logger) (Storage, error)
 		return nil, errors.New("could not create storage without logger")
 	}
 
-	return &SimpleStorage{engine, logger}, nil
+	return &Storage{engine, logger}, nil
 }
