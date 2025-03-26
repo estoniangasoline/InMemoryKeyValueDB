@@ -7,6 +7,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	okAnswer = "SUCCESS"
+)
+
 type engineLayer interface {
 	SET(key string, value string) error
 	GET(key string) (string, error)
@@ -28,11 +32,19 @@ func (s *Storage) HandleRequest(requestType int, arg ...string) (string, error) 
 
 	case commands.SetCommand:
 		s.logger.Debug("started set command")
-		return "", s.Set(arg[0], arg[1])
+		err := s.Set(arg[0], arg[1])
+		if err == nil {
+			return okAnswer, nil
+		}
+		return "", err
 
 	case commands.DelCommand:
 		s.logger.Debug("started del command")
-		return "", s.Del(arg[0])
+		err := s.Del(arg[0])
+		if err == nil {
+			return okAnswer, nil
+		}
+		return "", err
 
 	default:
 		s.logger.Error("uncorrect request type")
