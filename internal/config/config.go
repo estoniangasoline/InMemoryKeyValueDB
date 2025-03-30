@@ -45,6 +45,7 @@ type NetworkConfig struct {
 	MaxConnections int           `yaml:"max_connections"`
 	MaxMessageSize string        `yaml:"max_message_size"`
 	IdleTimeout    time.Duration `yaml:"idle_timeout"`
+	IsSync         bool          `yaml:"is_sync"`
 }
 
 type LoggingConfig struct {

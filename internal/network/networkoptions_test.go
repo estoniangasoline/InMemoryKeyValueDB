@@ -49,6 +49,20 @@ func Test_WithServerMaxConnections(t *testing.T) {
 	assert.Equal(t, expectedServer, actualServer)
 }
 
+func Test_WithSync(t *testing.T) {
+	t.Parallel()
+
+	isSync := true
+
+	expectedServer := Server{IsSync: isSync}
+	var actualServer Server
+
+	option := WithSync(isSync)
+	option(&actualServer)
+
+	assert.Equal(t, expectedServer, actualServer)
+}
+
 func Test_WithClientTimeout(t *testing.T) {
 	t.Parallel()
 

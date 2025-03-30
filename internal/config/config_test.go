@@ -17,6 +17,7 @@ network:
   max_connections: 100
   max_message_size: "4KB"
   idle_timeout: 5m
+  is_sync: true
 logging:
   level: "info"
   output: "logging.txt"
@@ -51,6 +52,7 @@ func Test_NewConfig(t *testing.T) {
 					MaxConnections: 100,
 					MaxMessageSize: "4KB",
 					IdleTimeout:    time.Minute * 5,
+					IsSync:         true,
 				},
 
 				Logging: &LoggingConfig{

@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"inmemorykvdb/internal/cli"
 	"inmemorykvdb/internal/network"
 	"os"
 	"time"
@@ -29,7 +30,7 @@ func main() {
 
 	for {
 
-		req, err := ReadRequest(in)
+		req, err := cli.ReadRequest(in)
 
 		if err != nil {
 			fmt.Println(err.Error())
@@ -43,26 +44,6 @@ func main() {
 			continue
 		}
 
-		WriteResponse(string(resp))
-	}
-}
-
-func ReadRequest(in *bufio.Reader) (string, error) {
-
-	fmt.Print("ENTER COMMAND: ")
-	req, err := in.ReadString('\n')
-
-	if err != nil {
-		return "", err
-	}
-
-	return req, nil
-}
-
-func WriteResponse(resp string) {
-	if resp == "" {
-		fmt.Println("OK")
-	} else {
-		fmt.Println("RESPONSE IS:", resp)
+		cli.WriteResponse(string(resp))
 	}
 }

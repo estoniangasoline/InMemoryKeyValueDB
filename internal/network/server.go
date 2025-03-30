@@ -23,6 +23,7 @@ type Server struct {
 	IdleTimeout    time.Duration
 	MaxBufferSize  int
 	MaxConnections int
+	IsSync         bool
 
 	Logger *zap.Logger
 
@@ -47,13 +48,15 @@ func NewServer(address string, logger *zap.Logger, options ...ServerOption) (*Se
 		option(server)
 	}
 
-	semaphore, err := serversync.NewSemaphore(server.MaxConnections)
+	if server.IsSync {
+		semaphore, err := serversync.NewSemaphore(server.MaxConnections)
 
-	if err != nil {
-		return nil, fmt.Errorf("failed to create semaphore")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create semaphore")
+		}
+
+		server.semaphore = semaphore
 	}
-
-	server.semaphore = semaphore
 
 	return server, nil
 }
@@ -104,10 +107,14 @@ func (s *Server) handleConnection(conn net.Conn, handleFunc HandleRequest) {
 			s.Logger.Error("failed to close the connection")
 		}
 
-		s.semaphore.Release()
+		if s.IsSync {
+			s.semaphore.Release()
+		}
 	}()
 
-	s.semaphore.Acquire()
+	if s.IsSync {
+		s.semaphore.Acquire()
+	}
 
 	request := make([]byte, s.MaxBufferSize)
 

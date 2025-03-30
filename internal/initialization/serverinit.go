@@ -20,6 +20,7 @@ const (
 	defaultMaxMessageSize = 1024
 	defaultMultiply       = 4
 	defaultTimeout        = 0 * time.Second
+	defaultIsSync         = false
 )
 
 func createServer(cnfg *config.NetworkConfig, logger *zap.Logger) (*network.Server, error) {
@@ -32,7 +33,8 @@ func createServer(cnfg *config.NetworkConfig, logger *zap.Logger) (*network.Serv
 		return network.NewServer(defaultAddress, logger,
 			network.WithServerMaxBufferSize(defaultMaxMessageSize),
 			network.WithServerMaxConnections(defaultMaxConnections),
-			network.WithServerTimeout(defaultTimeout))
+			network.WithServerTimeout(defaultTimeout),
+			network.WithSync(defaultIsSync))
 	}
 
 	address := cnfg.Address

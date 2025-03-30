@@ -24,6 +24,12 @@ func WithServerMaxConnections(maxConnections int) ServerOption {
 	}
 }
 
+func WithSync(isSync bool) ServerOption {
+	return func(s *Server) {
+		s.IsSync = isSync
+	}
+}
+
 type ClientOption func(*Client)
 
 func WithClientTimeout(timeout time.Duration) ClientOption {
