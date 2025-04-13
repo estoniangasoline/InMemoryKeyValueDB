@@ -3,6 +3,7 @@ package storage
 import (
 	"errors"
 	"inmemorykvdb/internal/database/commands"
+	"inmemorykvdb/internal/database/request"
 	"inmemorykvdb/internal/database/storage/engine"
 	"testing"
 
@@ -17,63 +18,39 @@ func Test_NewStorage(t *testing.T) {
 	type testCase struct {
 		name string
 
-		nilEngine bool
-		logger    *zap.Logger
+		logger  *zap.Logger
+		options []StorageOption
 
 		expectedErr error
 	}
+
+	testEngine, _ := engine.NewInMemoryEngine(zap.NewNop())
 
 	testCases := []testCase{
 
 		{
 			name: "valid storage",
 
-			nilEngine: false,
-			logger:    zap.NewNop(),
+			options: []StorageOption{WithEngine(testEngine)},
+			logger:  zap.NewNop(),
 
 			expectedErr: nil,
 		},
 
 		{
-			name: "storage without engine",
-
-			nilEngine: true,
-			logger:    zap.NewNop(),
-
-			expectedErr: errors.New("could not create storage without engine"),
-		},
-
-		{
 			name: "storage without logger",
 
-			nilEngine: false,
-			logger:    nil,
+			options: []StorageOption{WithEngine(testEngine)},
+			logger:  nil,
 
 			expectedErr: errors.New("could not create storage without logger"),
-		},
-
-		{
-			name: "storage without anything",
-
-			nilEngine: true,
-			logger:    nil,
-
-			expectedErr: errors.New("could not create storage without engine and logger"),
 		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 
-			var testEngine engineLayer
-
-			if test.nilEngine {
-				testEngine = nil
-			} else {
-				testEngine, _ = engine.NewInMemoryEngine(zap.NewNop())
-			}
-
-			_, err := NewStorage(testEngine, test.logger)
+			_, err := NewStorage(test.logger, test.options...)
 
 			assert.Equal(t, test.expectedErr, err)
 		})
@@ -87,8 +64,7 @@ func Test_HandleRequest(t *testing.T) {
 	type testCase struct {
 		name string
 
-		requestType int
-		args        []string
+		request request.Request
 
 		expectStr   string
 		expectedErr error
@@ -99,18 +75,16 @@ func Test_HandleRequest(t *testing.T) {
 		{
 			name: "set request",
 
-			requestType: commands.SetCommand,
-			args:        []string{"asdfg", "qwert"},
+			request: request.Request{RequestType: commands.SetCommand, Args: []string{"asdfg", "qwert"}},
 
-			expectStr:   "",
+			expectStr:   okAnswer,
 			expectedErr: nil,
 		},
 
 		{
 			name: "get request",
 
-			requestType: commands.GetCommand,
-			args:        []string{"asdfg"},
+			request: request.Request{RequestType: commands.GetCommand, Args: []string{"asdfg"}},
 
 			expectStr:   "qwert",
 			expectedErr: nil,
@@ -119,18 +93,16 @@ func Test_HandleRequest(t *testing.T) {
 		{
 			name: "del request",
 
-			requestType: commands.DelCommand,
-			args:        []string{"asdfg"},
+			request: request.Request{RequestType: commands.DelCommand, Args: []string{"asdfg"}},
 
-			expectStr:   "",
+			expectStr:   okAnswer,
 			expectedErr: nil,
 		},
 
 		{
 			name: "not a correct request",
 
-			requestType: 10,
-			args:        []string{"asdfg"},
+			request: request.Request{RequestType: 10, Args: []string{"asdfg"}},
 
 			expectStr:   "",
 			expectedErr: errors.New("uncorrect request type"),
@@ -138,16 +110,58 @@ func Test_HandleRequest(t *testing.T) {
 	}
 
 	testEngine, _ := engine.NewInMemoryEngine(zap.NewNop())
+	logger := zap.NewNop()
 
-	storage, _ := NewStorage(testEngine, zap.NewNop())
+	storage, _ := NewStorage(logger, WithEngine(testEngine))
 
 	for _, test := range testCases {
 
 		t.Run(test.name, func(t *testing.T) {
-			actualValue, actualErr := storage.HandleRequest(test.requestType, test.args...)
+			actualValue, actualErr := storage.HandleRequest(test.request)
 
 			assert.Equal(t, test.expectStr, actualValue)
 			assert.Equal(t, test.expectedErr, actualErr)
 		})
 	}
+}
+
+func Test_recoverData(t *testing.T) {
+	eng, _ := engine.NewInMemoryEngine(zap.NewNop())
+
+	stor, _ := NewStorage(zap.NewNop(), WithEngine(eng))
+
+	batch := request.Batch{Data: []*request.Request{
+		{
+			RequestType: commands.SetCommand,
+			Args:        []string{"biba", "boba"},
+		},
+
+		{
+			RequestType: commands.SetCommand,
+			Args:        []string{"boba", "biba"},
+		},
+	}}
+
+	stor.recoverData(&batch)
+
+	answer, _ := stor.get("biba")
+	assert.Equal(t, "boba", answer)
+
+	answer, _ = stor.get("boba")
+	assert.Equal(t, "biba", answer)
+
+	batch = request.Batch{Data: []*request.Request{
+		{
+			RequestType: commands.DelCommand,
+			Args:        []string{"biba"},
+		},
+	}}
+
+	stor.recoverData(&batch)
+
+	answer, _ = stor.get("biba")
+	assert.Equal(t, "", answer)
+
+	answer, _ = stor.get("boba")
+	assert.Equal(t, "biba", answer)
 }

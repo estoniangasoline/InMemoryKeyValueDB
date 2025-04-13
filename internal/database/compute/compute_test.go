@@ -3,6 +3,7 @@ package compute
 import (
 	"errors"
 	"inmemorykvdb/internal/database/commands"
+	"inmemorykvdb/internal/database/request"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -66,9 +67,8 @@ func Test_Parse(t *testing.T) {
 
 		data string
 
-		expectedCommand   int
-		expectedArguments []string
-		expectedErr       error
+		expectedRequest request.Request
+		expectedErr     error
 	}
 
 	testCases := []testCase{
@@ -78,9 +78,8 @@ func Test_Parse(t *testing.T) {
 
 			data: "get qwerty",
 
-			expectedCommand:   commands.GetCommand,
-			expectedArguments: []string{"qwerty"},
-			expectedErr:       nil,
+			expectedRequest: request.Request{RequestType: commands.GetCommand, Args: []string{"qwerty"}},
+			expectedErr:     nil,
 		},
 
 		{
@@ -88,9 +87,8 @@ func Test_Parse(t *testing.T) {
 
 			data: "set qwerty asdfgh",
 
-			expectedCommand:   commands.SetCommand,
-			expectedArguments: []string{"qwerty", "asdfgh"},
-			expectedErr:       nil,
+			expectedRequest: request.Request{RequestType: commands.SetCommand, Args: []string{"qwerty", "asdfgh"}},
+			expectedErr:     nil,
 		},
 
 		{
@@ -98,9 +96,8 @@ func Test_Parse(t *testing.T) {
 
 			data: "del qwerty",
 
-			expectedCommand:   commands.DelCommand,
-			expectedArguments: []string{"qwerty"},
-			expectedErr:       nil,
+			expectedRequest: request.Request{RequestType: commands.DelCommand, Args: []string{"qwerty"}},
+			expectedErr:     nil,
 		},
 
 		{
@@ -108,9 +105,8 @@ func Test_Parse(t *testing.T) {
 
 			data: "GET qwerty",
 
-			expectedCommand:   commands.GetCommand,
-			expectedArguments: []string{"qwerty"},
-			expectedErr:       nil,
+			expectedRequest: request.Request{RequestType: commands.GetCommand, Args: []string{"qwerty"}},
+			expectedErr:     nil,
 		},
 
 		{
@@ -118,9 +114,8 @@ func Test_Parse(t *testing.T) {
 
 			data: "SET qwerty asdfgh",
 
-			expectedCommand:   commands.SetCommand,
-			expectedArguments: []string{"qwerty", "asdfgh"},
-			expectedErr:       nil,
+			expectedRequest: request.Request{RequestType: commands.SetCommand, Args: []string{"qwerty", "asdfgh"}},
+			expectedErr:     nil,
 		},
 
 		{
@@ -128,19 +123,8 @@ func Test_Parse(t *testing.T) {
 
 			data: "DEL qwerty",
 
-			expectedCommand:   commands.DelCommand,
-			expectedArguments: []string{"qwerty"},
-			expectedErr:       nil,
-		},
-
-		{
-			name: "correct del request",
-
-			data: "del qwerty",
-
-			expectedCommand:   commands.DelCommand,
-			expectedArguments: []string{"qwerty"},
-			expectedErr:       nil,
+			expectedRequest: request.Request{RequestType: commands.DelCommand, Args: []string{"qwerty"}},
+			expectedErr:     nil,
 		},
 
 		{
@@ -148,9 +132,8 @@ func Test_Parse(t *testing.T) {
 
 			data: "GET qwerty poiuy",
 
-			expectedCommand:   commands.GetCommand,
-			expectedArguments: []string{"qwerty"},
-			expectedErr:       nil,
+			expectedRequest: request.Request{RequestType: commands.GetCommand, Args: []string{"qwerty"}},
+			expectedErr:     nil,
 		},
 
 		{
@@ -158,9 +141,8 @@ func Test_Parse(t *testing.T) {
 
 			data: "SET qwerty asdfgh [poiuyt]",
 
-			expectedCommand:   commands.SetCommand,
-			expectedArguments: []string{"qwerty", "asdfgh"},
-			expectedErr:       nil,
+			expectedRequest: request.Request{RequestType: commands.SetCommand, Args: []string{"qwerty", "asdfgh"}},
+			expectedErr:     nil,
 		},
 
 		{
@@ -168,9 +150,8 @@ func Test_Parse(t *testing.T) {
 
 			data: "DEL qwerty poiuy oiuy",
 
-			expectedCommand:   commands.DelCommand,
-			expectedArguments: []string{"qwerty"},
-			expectedErr:       nil,
+			expectedRequest: request.Request{RequestType: commands.DelCommand, Args: []string{"qwerty"}},
+			expectedErr:     nil,
 		},
 
 		{
@@ -178,9 +159,8 @@ func Test_Parse(t *testing.T) {
 
 			data: "DEL",
 
-			expectedCommand:   commands.IncorrectCommand,
-			expectedArguments: nil,
-			expectedErr:       errors.New("could not to parse less than two arguments"),
+			expectedRequest: request.Request{RequestType: commands.IncorrectCommand},
+			expectedErr:     errors.New("could not to parse less than two arguments"),
 		},
 
 		{
@@ -188,9 +168,8 @@ func Test_Parse(t *testing.T) {
 
 			data: "LOL boba",
 
-			expectedCommand:   commands.IncorrectCommand,
-			expectedArguments: nil,
-			expectedErr:       errors.New("incorrect command"),
+			expectedRequest: request.Request{RequestType: commands.IncorrectCommand},
+			expectedErr:     errors.New("incorrect command"),
 		},
 
 		{
@@ -198,9 +177,8 @@ func Test_Parse(t *testing.T) {
 
 			data: "SET POP",
 
-			expectedCommand:   commands.SetCommand,
-			expectedArguments: nil,
-			expectedErr:       errors.New("set command has two arguments"),
+			expectedRequest: request.Request{RequestType: commands.SetCommand},
+			expectedErr:     errors.New("set command has two arguments"),
 		},
 
 		{
@@ -208,9 +186,8 @@ func Test_Parse(t *testing.T) {
 
 			data: "set biba boba\r\n",
 
-			expectedCommand:   commands.SetCommand,
-			expectedArguments: []string{"biba", "boba"},
-			expectedErr:       nil,
+			expectedRequest: request.Request{RequestType: commands.SetCommand, Args: []string{"biba", "boba"}},
+			expectedErr:     nil,
 		},
 	}
 
@@ -218,10 +195,9 @@ func Test_Parse(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			command, args, err := compute.Parse(test.data)
+			request, err := compute.Parse(test.data)
 
-			assert.Equal(t, test.expectedCommand, command)
-			assert.Equal(t, test.expectedArguments, args)
+			assert.Equal(t, test.expectedRequest, request)
 			assert.Equal(t, test.expectedErr, err)
 		})
 	}

@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func createStorage(engine engineLayer, logger *zap.Logger) (*storage.Storage, error) {
+func createStorage(engine engineLayer, wal WAL, logger *zap.Logger) (*storage.Storage, error) {
 	if logger == nil {
 		return nil, errors.New("logger is nil")
 	}
@@ -16,7 +16,7 @@ func createStorage(engine engineLayer, logger *zap.Logger) (*storage.Storage, er
 		return nil, errors.New("engine is nil")
 	}
 
-	storage, err := storage.NewStorage(engine, logger)
+	storage, err := storage.NewStorage(logger, storage.WithEngine(engine), storage.WithWal(wal))
 
 	return storage, err
 }

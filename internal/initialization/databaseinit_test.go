@@ -82,7 +82,7 @@ func Test_createDatabase(t *testing.T) {
 
 			if !test.nilStorage {
 				eng, _ := engine.NewInMemoryEngine(zap.NewNop())
-				stor, _ = storage.NewStorage(eng, zap.NewNop())
+				stor, _ = storage.NewStorage(zap.NewNop(), storage.WithEngine(eng))
 			}
 
 			if !test.nilCompute {

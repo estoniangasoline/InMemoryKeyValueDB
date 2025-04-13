@@ -23,9 +23,7 @@ type Server struct {
 	IdleTimeout    time.Duration
 	MaxBufferSize  int
 	MaxConnections int
-	IsSync         bool
-
-	Logger *zap.Logger
+	Logger         *zap.Logger
 
 	semaphore *serversync.Semaphore
 }
@@ -48,7 +46,7 @@ func NewServer(address string, logger *zap.Logger, options ...ServerOption) (*Se
 		option(server)
 	}
 
-	if server.IsSync {
+	if server.MaxConnections != 0 {
 		semaphore, err := serversync.NewSemaphore(server.MaxConnections)
 
 		if err != nil {
@@ -107,12 +105,12 @@ func (s *Server) handleConnection(conn net.Conn, handleFunc HandleRequest) {
 			s.Logger.Error("failed to close the connection")
 		}
 
-		if s.IsSync {
+		if s.MaxConnections != 0 {
 			s.semaphore.Release()
 		}
 	}()
 
-	if s.IsSync {
+	if s.MaxConnections != 0 {
 		s.semaphore.Acquire()
 	}
 

@@ -3,6 +3,7 @@ package compute
 import (
 	"errors"
 	"inmemorykvdb/internal/database/commands"
+	"inmemorykvdb/internal/database/request"
 	"strings"
 
 	"go.uber.org/zap"
@@ -24,13 +25,13 @@ func NewCompute(logger *zap.Logger) (*Compute, error) {
 	return &Compute{logger: logger}, nil
 }
 
-func (c *Compute) Parse(data string) (int, []string, error) {
+func (c *Compute) Parse(data string) (request.Request, error) {
 
 	splittedData := strings.Split(data, " ")
 
 	if len(splittedData) < 2 {
 		c.logger.Error("could not to parse less than two arguments")
-		return commands.IncorrectCommand, nil, errors.New("could not to parse less than two arguments")
+		return request.Request{RequestType: commands.IncorrectCommand}, errors.New("could not to parse less than two arguments")
 	}
 
 	stringCommand := splittedData[0]
@@ -38,7 +39,7 @@ func (c *Compute) Parse(data string) (int, []string, error) {
 	parsedCommand, err := c.parseCommand(stringCommand)
 
 	if err != nil {
-		return parsedCommand, nil, err
+		return request.Request{RequestType: parsedCommand}, err
 	}
 
 	c.logger.Debug("parsing of command is correct")
@@ -46,12 +47,13 @@ func (c *Compute) Parse(data string) (int, []string, error) {
 	parsedArgs, err := c.parseArguments(parsedCommand, splittedData[1:])
 
 	if err != nil {
-		return parsedCommand, parsedArgs, err
+		c.logger.Error("parsing arguments has error")
+		return request.Request{RequestType: parsedCommand, Args: parsedArgs}, err
 	}
 
 	c.logger.Debug("parsing of arguments is correct")
 
-	return parsedCommand, parsedArgs, nil
+	return request.Request{RequestType: parsedCommand, Args: parsedArgs}, nil
 }
 
 func (c *Compute) parseCommand(stringCommand string) (int, error) {

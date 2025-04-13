@@ -34,8 +34,7 @@ func Test_NewServer(t *testing.T) {
 			address: testAddress,
 			options: []ServerOption{WithServerTimeout(testTimeout),
 				WithServerMaxBufferSize(testBufferSize),
-				WithServerMaxConnections(testMaxConnections),
-				WithSync(testIsSync)},
+				WithServerMaxConnections(testMaxConnections)},
 			logger: zap.NewNop(),
 
 			expectedNilObj: false,
@@ -48,8 +47,7 @@ func Test_NewServer(t *testing.T) {
 			address: "uncorrect address",
 			options: []ServerOption{WithServerTimeout(testTimeout),
 				WithServerMaxBufferSize(testBufferSize),
-				WithServerMaxConnections(testMaxConnections),
-				WithSync(testIsSync)},
+				WithServerMaxConnections(testMaxConnections)},
 			logger: zap.NewNop(),
 
 			expectedNilObj: true,
@@ -62,8 +60,7 @@ func Test_NewServer(t *testing.T) {
 			address: testAddress,
 			options: []ServerOption{WithServerTimeout(testTimeout),
 				WithServerMaxBufferSize(testBufferSize),
-				WithServerMaxConnections(testMaxConnections),
-				WithSync(testIsSync)},
+				WithServerMaxConnections(testMaxConnections)},
 			logger: nil,
 
 			expectedNilObj: true,
@@ -91,7 +88,7 @@ func Test_HandleConnections(t *testing.T) {
 
 	server, _ := NewServer(testAddress, zap.NewNop(), []ServerOption{WithServerTimeout(testTimeout),
 		WithServerMaxBufferSize(testBufferSize),
-		WithServerMaxConnections(testMaxConnections), WithSync(true)}...)
+		WithServerMaxConnections(testMaxConnections)}...)
 
 	defer server.Listener.Close()
 
@@ -133,13 +130,13 @@ func Test_HandleConnections(t *testing.T) {
 		{
 			name: "normal load",
 
-			connectionCount: 50,
+			connectionCount: 51,
 		},
 
 		{
 			name: "load bigger than max connections count",
 
-			connectionCount: 150,
+			connectionCount: 101,
 		},
 	}
 

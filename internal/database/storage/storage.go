@@ -3,6 +3,7 @@ package storage
 import (
 	"errors"
 	"inmemorykvdb/internal/database/commands"
+	"inmemorykvdb/internal/database/request"
 
 	"go.uber.org/zap"
 )
@@ -17,22 +18,37 @@ type engineLayer interface {
 	DEL(key string) error
 }
 
+type WAL interface {
+	StartWAL()
+	Write(req request.Request)
+	Read() *request.Batch
+}
+
 type Storage struct {
-	Engine engineLayer
+	wal    WAL
+	engine engineLayer
 	logger *zap.Logger
 }
 
-func (s *Storage) HandleRequest(requestType int, arg ...string) (string, error) {
+func (s *Storage) HandleRequest(req request.Request) (string, error) {
+	if s.wal != nil && req.RequestType != commands.GetCommand {
+		s.wal.Write(req)
+	}
 
-	switch requestType {
+	resp, err := s.requestToEngine(req)
+	return resp, err
+}
+
+func (s *Storage) requestToEngine(req request.Request) (string, error) {
+	switch req.RequestType {
 
 	case commands.GetCommand:
 		s.logger.Debug("started get command")
-		return s.Get(arg[0])
+		return s.get(req.Args[0])
 
 	case commands.SetCommand:
 		s.logger.Debug("started set command")
-		err := s.Set(arg[0], arg[1])
+		err := s.set(req.Args[0], req.Args[1])
 		if err == nil {
 			return okAnswer, nil
 		}
@@ -40,7 +56,7 @@ func (s *Storage) HandleRequest(requestType int, arg ...string) (string, error) 
 
 	case commands.DelCommand:
 		s.logger.Debug("started del command")
-		err := s.Del(arg[0])
+		err := s.del(req.Args[0])
 		if err == nil {
 			return okAnswer, nil
 		}
@@ -52,31 +68,47 @@ func (s *Storage) HandleRequest(requestType int, arg ...string) (string, error) 
 	}
 }
 
-func (s *Storage) Set(key string, value string) error {
-	return s.Engine.SET(key, value)
+func (s *Storage) set(key string, value string) error {
+	return s.engine.SET(key, value)
 }
 
-func (s *Storage) Get(key string) (string, error) {
-	return s.Engine.GET(key)
+func (s *Storage) get(key string) (string, error) {
+	return s.engine.GET(key)
 }
 
-func (s *Storage) Del(key string) error {
-	return s.Engine.DEL(key)
+func (s *Storage) del(key string) error {
+	return s.engine.DEL(key)
 }
 
-func NewStorage(engine engineLayer, logger *zap.Logger) (*Storage, error) {
-
-	if engine == nil && logger == nil {
-		return nil, errors.New("could not create storage without engine and logger")
-	}
-
-	if engine == nil {
-		return nil, errors.New("could not create storage without engine")
-	}
+func NewStorage(logger *zap.Logger, options ...StorageOption) (*Storage, error) {
 
 	if logger == nil {
 		return nil, errors.New("could not create storage without logger")
 	}
 
-	return &Storage{engine, logger}, nil
+	storage := &Storage{logger: logger}
+
+	for _, option := range options {
+		option(storage)
+	}
+
+	if storage.wal != nil {
+		recovered := storage.wal.Read()
+		storage.recoverData(recovered)
+
+		storage.wal.StartWAL()
+	}
+
+	return storage, nil
+}
+
+func (s *Storage) recoverData(batch *request.Batch) {
+
+	for _, req := range batch.Data {
+		_, err := s.requestToEngine(*req)
+
+		if err != nil {
+			s.logger.Error(err.Error())
+		}
+	}
 }
