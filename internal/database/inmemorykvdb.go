@@ -2,16 +2,17 @@ package database
 
 import (
 	"errors"
+	"inmemorykvdb/internal/database/request"
 
 	"go.uber.org/zap"
 )
 
 type computeLayer interface {
-	Parse(data string) (int, []string, error)
+	Parse(data string) (request.Request, error)
 }
 
 type storageLayer interface {
-	HandleRequest(requestType int, arg ...string) (string, error)
+	HandleRequest(request.Request) (string, error)
 }
 
 type InMemoryKeyValueDatabase struct {
@@ -33,7 +34,7 @@ func (db *InMemoryKeyValueDatabase) HandleRequest(data string) (string, error) {
 
 	db.logger.Debug("request started, send data to compute")
 
-	command, args, err := db.compute.Parse(data)
+	req, err := db.compute.Parse(data)
 	db.logger.Debug("data parsed")
 
 	if err != nil {
@@ -42,7 +43,7 @@ func (db *InMemoryKeyValueDatabase) HandleRequest(data string) (string, error) {
 	}
 
 	db.logger.Debug("send request to storage")
-	resp, err := db.storage.HandleRequest(command, args...)
+	resp, err := db.storage.HandleRequest(req)
 	db.logger.Debug("storage returned a response")
 
 	if err != nil {

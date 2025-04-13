@@ -9,9 +9,10 @@ import (
 )
 
 type Config struct {
-	Engine  *EngineConfig  `yaml:"engine"`
-	Network *NetworkConfig `yaml:"network"`
-	Logging *LoggingConfig `yaml:"logging"`
+	Engine    *EngineConfig  `yaml:"engine"`
+	Network   *NetworkConfig `yaml:"network"`
+	Logging   *LoggingConfig `yaml:"logging"`
+	WalConfig *WalConfig     `yaml:"wal"`
 }
 
 func NewConfig(reader io.Reader) (*Config, error) {
@@ -51,4 +52,12 @@ type NetworkConfig struct {
 type LoggingConfig struct {
 	Level  string `yaml:"level"`
 	Output string `yaml:"output"`
+}
+
+type WalConfig struct {
+	BatchSize      int           `yaml:"flushing_batch_size"`
+	BatchTimeout   time.Duration `yaml:"flushing_batch_timeout"`
+	MaxSegmentSize string        `yaml:"max_segment_size"`
+	DataDirectory  string        `yaml:"data_directory"`
+	FileName       string        `yaml:"file_name"`
 }

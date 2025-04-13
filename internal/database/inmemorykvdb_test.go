@@ -91,7 +91,7 @@ func Test_NewInMemoryKvDb(t *testing.T) {
 
 			if !test.nilStorage {
 				eng, _ := engine.NewInMemoryEngine(zap.NewNop())
-				stor, _ = storage.NewStorage(eng, zap.NewNop())
+				stor, _ = storage.NewStorage(zap.NewNop(), storage.WithEngine(eng))
 			}
 
 			if !test.nilCompute {
@@ -130,7 +130,7 @@ func Test_Request(t *testing.T) {
 
 			data: "set biba boba",
 
-			expectedResp: "",
+			expectedResp: "SUCCESS",
 			expectedErr:  nil,
 		},
 		{
@@ -154,7 +154,7 @@ func Test_Request(t *testing.T) {
 
 			data: "deL biba",
 
-			expectedResp: "",
+			expectedResp: "SUCCESS",
 			expectedErr:  nil,
 		},
 		{
@@ -162,7 +162,7 @@ func Test_Request(t *testing.T) {
 
 			data: "set boba biba",
 
-			expectedResp: "",
+			expectedResp: "SUCCESS",
 			expectedErr:  nil,
 		},
 		{
@@ -178,7 +178,7 @@ func Test_Request(t *testing.T) {
 
 			data: "del biba",
 
-			expectedResp: "",
+			expectedResp: "SUCCESS",
 			expectedErr:  nil,
 		},
 		{
@@ -192,7 +192,7 @@ func Test_Request(t *testing.T) {
 	}
 
 	eng, _ := engine.NewInMemoryEngine(zap.NewNop())
-	stor, _ := storage.NewStorage(eng, zap.NewNop())
+	stor, _ := storage.NewStorage(zap.NewNop(), storage.WithEngine(eng))
 
 	comp, _ := compute.NewCompute(zap.NewNop())
 
