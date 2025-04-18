@@ -84,6 +84,57 @@ func Test_NewReadLevel(t *testing.T) {
 	}
 }
 
+func Test_findFiles(t *testing.T) {
+	type testCase struct {
+		name string
+
+		pattern string
+
+		expectedFileNames []string
+		expectedErr       error
+	}
+
+	testCases := []testCase{
+		{
+			name: "correct pattern",
+
+			pattern: "read",
+
+			expectedFileNames: []string{"readlevel.go", "readlevel_test.go", "readleveloptions.go", "readleveloptions_test.go"},
+			expectedErr:       nil,
+		},
+
+		{
+			name: "correct pattern but empty filenames",
+
+			pattern: "write",
+
+			expectedFileNames: []string(nil),
+			expectedErr:       nil,
+		},
+
+		{
+			name: "bad pattern",
+
+			pattern: "[anc",
+
+			expectedFileNames: []string(nil),
+			expectedErr:       errors.New("incorrect pattern to find the files"),
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			rl := &readLevel{pattern: test.pattern}
+
+			err := rl.findFiles()
+
+			assert.Equal(t, test.expectedFileNames, rl.fileNames)
+			assert.Equal(t, test.expectedErr, err)
+		})
+	}
+}
+
 func Test_Read(t *testing.T) {
 	t.Parallel()
 

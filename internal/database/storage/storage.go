@@ -44,11 +44,11 @@ func (s *Storage) requestToEngine(req request.Request) (string, error) {
 
 	case commands.GetCommand:
 		s.logger.Debug("started get command")
-		return s.get(req.Args[0])
+		return s.engine.GET(req.Args[0])
 
 	case commands.SetCommand:
 		s.logger.Debug("started set command")
-		err := s.set(req.Args[0], req.Args[1])
+		err := s.engine.SET(req.Args[0], req.Args[1])
 		if err == nil {
 			return okAnswer, nil
 		}
@@ -56,7 +56,7 @@ func (s *Storage) requestToEngine(req request.Request) (string, error) {
 
 	case commands.DelCommand:
 		s.logger.Debug("started del command")
-		err := s.del(req.Args[0])
+		err := s.engine.DEL(req.Args[0])
 		if err == nil {
 			return okAnswer, nil
 		}
@@ -66,18 +66,6 @@ func (s *Storage) requestToEngine(req request.Request) (string, error) {
 		s.logger.Error("uncorrect request type")
 		return "", errors.New("uncorrect request type")
 	}
-}
-
-func (s *Storage) set(key string, value string) error {
-	return s.engine.SET(key, value)
-}
-
-func (s *Storage) get(key string) (string, error) {
-	return s.engine.GET(key)
-}
-
-func (s *Storage) del(key string) error {
-	return s.engine.DEL(key)
 }
 
 func NewStorage(logger *zap.Logger, options ...StorageOption) (*Storage, error) {

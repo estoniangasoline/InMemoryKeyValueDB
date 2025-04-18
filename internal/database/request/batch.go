@@ -28,14 +28,14 @@ func (b *Batch) Add(req *Request) {
 	b.Data = append(b.Data, req)
 }
 
-func (b *Batch) UnparseBatch(data *[]byte) error {
+func (b *Batch) LoadData(data *[]byte) error {
 	var startIndex int
 
 	var hasUnparsedRequests bool
 
 	for i, elem := range *data {
 		if string([]byte{elem}) == EndElement {
-			unparsed, err := Unparse(string((*data)[startIndex:i]))
+			unparsed, err := NewRequest(string((*data)[startIndex:i]))
 			startIndex = i + 1
 
 			if err == nil {

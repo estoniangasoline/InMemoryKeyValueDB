@@ -37,19 +37,29 @@ func NewReadLevel(logger *zap.Logger, pattern string, options ...readLevelOption
 		}
 	}
 
+	err := rl.findFiles()
+
+	if err != nil {
+		return nil, err
+	}
+
 	if rl.fileMaxSize == 0 {
 		rl.fileMaxSize = defaultFileMaxSize
 	}
 
+	return rl, nil
+}
+
+func (rl *readLevel) findFiles() error {
 	fileNames, err := filepath.Glob(rl.pattern + "*")
 
 	if err != nil {
-		return nil, errors.New("incorrect pattern to find the files")
+		return errors.New("incorrect pattern to find the files")
 	}
 
 	rl.fileNames = fileNames
 
-	return rl, nil
+	return nil
 }
 
 func (rl *readLevel) Read() (*[][]byte, error) {
@@ -64,8 +74,11 @@ func (rl *readLevel) Read() (*[][]byte, error) {
 		fl, err := os.Open(name)
 
 		if err != nil {
+			rl.logger.Error(fmt.Sprintf("file %s could not be open with error: %s", name, err.Error()))
+
 			hasUnreadFiles = true
 			errorStr += name + " "
+
 			fl.Close()
 			continue
 		}
@@ -77,14 +90,8 @@ func (rl *readLevel) Read() (*[][]byte, error) {
 
 		if !errors.Is(err, io.EOF) && (err != nil || n == rl.fileMaxSize) {
 
-			var errMsg string
-			if err == nil && n == rl.fileMaxSize {
-				errMsg = "reading out of range"
-			} else {
-				errMsg = err.Error()
-			}
+			rl.logReadErr(err, n, name)
 
-			rl.logger.Debug(fmt.Sprintf("reading file %s is done with err %s", name, errMsg))
 			hasUnreadFiles = true
 			errorStr += name + " "
 			continue
@@ -102,4 +109,15 @@ func (rl *readLevel) Read() (*[][]byte, error) {
 	}
 
 	return &readData, nil
+}
+
+func (rl *readLevel) logReadErr(err error, readBytes int, name string) {
+	var errMsg string
+	if err == nil && readBytes == rl.fileMaxSize {
+		errMsg = "reading out of range"
+	} else {
+		errMsg = err.Error()
+	}
+
+	rl.logger.Debug(fmt.Sprintf("reading file %s is done with err %s", name, errMsg))
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_parseToBytes(t *testing.T) {
+func Test_ParseToBytes(t *testing.T) {
 	type testCase struct {
 		name string
 
@@ -47,7 +47,7 @@ func Test_parseToBytes(t *testing.T) {
 	}
 }
 
-func Test_unparse(t *testing.T) {
+func Test_NewRequest(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
@@ -105,7 +105,7 @@ func Test_unparse(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			req, err := Unparse(test.data)
+			req, err := NewRequest(test.data)
 
 			assert.Equal(t, test.expectedReq, req)
 			assert.Equal(t, test.expectedErr, err)

@@ -9,6 +9,12 @@ import (
 const (
 	DelimElement = " "
 	EndElement   = "\n"
+
+	minRequestLen        = 2
+	minSetRequestArgsLen = 2
+
+	commandIndex = 0
+	argsIndex    = 1
 )
 
 type Request struct {
@@ -39,15 +45,15 @@ func (r *Request) ParseToBytes() ([]byte, error) {
 	return parsed, nil
 }
 
-func Unparse(data string) (*Request, error) {
+func NewRequest(data string) (*Request, error) {
 	splittedData := strings.Split(data, DelimElement)
 
-	if len(splittedData) < 2 {
+	if len(splittedData) < minRequestLen {
 		return nil, errors.New("incorrect data")
 	}
 
 	req := &Request{}
-	req.Args = splittedData[1:]
+	req.Args = splittedData[argsIndex:]
 
 	lastArg := req.Args[len(req.Args)-1]
 	lastElement := lastArg[len(lastArg)-1]
@@ -58,10 +64,10 @@ func Unparse(data string) (*Request, error) {
 
 	req.Args[len(req.Args)-1] = lastArg
 
-	switch splittedData[0] {
+	switch splittedData[commandIndex] {
 	case "SET":
 		req.RequestType = commands.SetCommand
-		if len(req.Args) < 2 {
+		if len(req.Args) < minSetRequestArgsLen {
 			return nil, errors.New("set command in data has less than two arguments")
 		}
 

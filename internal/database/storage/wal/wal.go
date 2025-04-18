@@ -87,6 +87,8 @@ func (w *WAL) handleEvents() {
 				w.writeOnDisk()
 			}
 
+			w.ticker.Reset(w.Timeout)
+
 		case request := <-w.requestChannel:
 			w.batch.Add(&request)
 
@@ -138,7 +140,7 @@ func (w *WAL) Read() *request.Batch {
 	batch := request.NewBatch(len(*data) * len((*data)[0]))
 
 	for _, arr := range *data {
-		err := batch.UnparseBatch(&arr)
+		err := batch.LoadData(&arr)
 		if err != nil {
 			w.logger.Error(err.Error())
 		}

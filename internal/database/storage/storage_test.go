@@ -144,10 +144,10 @@ func Test_recoverData(t *testing.T) {
 
 	stor.recoverData(&batch)
 
-	answer, _ := stor.get("biba")
+	answer, _ := stor.engine.GET("biba")
 	assert.Equal(t, "boba", answer)
 
-	answer, _ = stor.get("boba")
+	answer, _ = stor.engine.GET("boba")
 	assert.Equal(t, "biba", answer)
 
 	batch = request.Batch{Data: []*request.Request{
@@ -159,9 +159,9 @@ func Test_recoverData(t *testing.T) {
 
 	stor.recoverData(&batch)
 
-	answer, _ = stor.get("biba")
+	answer, _ = stor.engine.GET("biba")
 	assert.Equal(t, "", answer)
 
-	answer, _ = stor.get("boba")
+	answer, _ = stor.engine.GET("boba")
 	assert.Equal(t, "biba", answer)
 }

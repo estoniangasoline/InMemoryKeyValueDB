@@ -87,7 +87,7 @@ func Test_ParseBatch(t *testing.T) {
 	}
 }
 
-func Test_UnparseBatch(t *testing.T) {
+func Test_LoadData(t *testing.T) {
 	type testCase struct {
 		name string
 
@@ -140,7 +140,7 @@ func Test_UnparseBatch(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			batch := NewBatch(testMaxSize)
 
-			err := batch.UnparseBatch(&test.data)
+			err := batch.LoadData(&test.data)
 
 			assert.Equal(t, test.expectedRequests, batch.Data)
 			assert.Equal(t, test.expectedErr, err)
