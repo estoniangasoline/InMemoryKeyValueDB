@@ -21,6 +21,12 @@ network:
 logging:
   level: "info"
   output: "logging.txt"
+wal:
+  flushing_batch_size: 100
+  flushing_batch_timeout: "10ms"
+  max_segment_size: "10MB"
+  data_directory: "/data/spider/wal"
+  file_name: "write_ahead_log"
 `
 )
 
@@ -58,6 +64,13 @@ func Test_NewConfig(t *testing.T) {
 				Logging: &LoggingConfig{
 					Level:  "info",
 					Output: "logging.txt",
+				},
+				WalConfig: &WalConfig{
+					BatchSize:      100,
+					BatchTimeout:   10 * time.Millisecond,
+					MaxSegmentSize: "10MB",
+					DataDirectory:  "/data/spider/wal",
+					FileName:       "write_ahead_log",
 				},
 			},
 		},

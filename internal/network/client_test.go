@@ -126,7 +126,7 @@ func Test_Send(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			go startServer(test.response)
 
-			client, _ := NewClient(testAddress, WithClientMaxBufferSize(testBufferSize), WithClientTimeout(testBufferSize))
+			client, _ := NewClient(testAddress, WithClientMaxBufferSize(testBufferSize))
 
 			resp, err := client.Send([]byte(test.request))
 

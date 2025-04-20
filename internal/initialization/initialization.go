@@ -5,6 +5,7 @@ import (
 	"inmemorykvdb/internal/config"
 	"inmemorykvdb/internal/database"
 	"inmemorykvdb/internal/database/compute"
+	"inmemorykvdb/internal/database/request"
 	"inmemorykvdb/internal/database/storage"
 	"inmemorykvdb/internal/network"
 
@@ -15,6 +16,20 @@ type engineLayer interface {
 	SET(key string, value string) error
 	GET(key string) (string, error)
 	DEL(key string) error
+}
+
+type WAL interface {
+	StartWAL()
+	Write(req request.Request)
+	Read() *request.Batch
+}
+
+type readingLayer interface {
+	Read() (*[][]byte, error)
+}
+
+type writingLayer interface {
+	Write(*[]byte) (int, error)
 }
 
 type Initializer struct {
@@ -43,7 +58,25 @@ func NewInitializer(cnfg *config.Config) (*Initializer, error) {
 		return nil, err
 	}
 
-	storage, err := createStorage(engine, logger)
+	wl, err := createWriteLevel(logger, cnfg.WalConfig)
+
+	if err != nil {
+		return nil, err
+	}
+
+	rl, err := createReadLevel(logger, cnfg.WalConfig)
+
+	if err != nil {
+		return nil, err
+	}
+
+	writeAheadLog, err := createWal(cnfg.WalConfig, logger, wl, rl)
+
+	if err != nil {
+		return nil, err
+	}
+
+	storage, err := createStorage(engine, writeAheadLog, logger)
 
 	if err != nil {
 		return nil, err
