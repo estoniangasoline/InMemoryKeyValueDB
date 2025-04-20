@@ -122,10 +122,7 @@ func (w *WAL) writeOnDisk() {
 }
 
 func (w *WAL) Write(req request.Request) {
-	go func() {
-		w.requestChannel <- req
-	}()
-
+	w.requestChannel <- req
 	<-w.blockChannel
 }
 
