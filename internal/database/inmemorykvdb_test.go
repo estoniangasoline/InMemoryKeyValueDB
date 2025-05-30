@@ -91,7 +91,7 @@ func Test_NewInMemoryKvDb(t *testing.T) {
 
 			if !test.nilStorage {
 				eng, _ := engine.NewInMemoryEngine(zap.NewNop())
-				stor, _ = storage.NewStorage(zap.NewNop(), storage.WithEngine(eng))
+				stor, _ = storage.NewStorage(zap.NewNop(), eng)
 			}
 
 			if !test.nilCompute {
@@ -138,8 +138,8 @@ func Test_Request(t *testing.T) {
 
 			data: "get bibo",
 
-			expectedResp: "",
-			expectedErr:  errors.New("value not found"),
+			expectedResp: "NOT FOUND",
+			expectedErr:  nil,
 		},
 		{
 			name: "correct get request",
@@ -170,8 +170,8 @@ func Test_Request(t *testing.T) {
 
 			data: "GEt biba",
 
-			expectedResp: "",
-			expectedErr:  errors.New("value not found"),
+			expectedResp: "NOT FOUND",
+			expectedErr:  nil,
 		},
 		{
 			name: "del request to check deleting with no errors also deleted record",
@@ -192,7 +192,7 @@ func Test_Request(t *testing.T) {
 	}
 
 	eng, _ := engine.NewInMemoryEngine(zap.NewNop())
-	stor, _ := storage.NewStorage(zap.NewNop(), storage.WithEngine(eng))
+	stor, _ := storage.NewStorage(zap.NewNop(), eng)
 
 	comp, _ := compute.NewCompute(zap.NewNop())
 

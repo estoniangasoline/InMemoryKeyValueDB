@@ -49,3 +49,44 @@ func Test_WithFileMaxSizeRL(t *testing.T) {
 		})
 	}
 }
+
+func Test_WithDirectory(t *testing.T) {
+	type testCase struct {
+		name string
+
+		dir string
+
+		expectedErr error
+	}
+
+	testCases := []testCase{
+		{
+			name: "correct dir",
+
+			dir: "./",
+
+			expectedErr: nil,
+		},
+
+		{
+			name: "empty dir",
+
+			dir: "",
+
+			expectedErr: errors.New("directory could not be a empty string"),
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			rl := &readLevel{}
+
+			option := WithDirectory(test.dir)
+
+			err := option(rl)
+
+			assert.Equal(t, test.dir, rl.directory)
+			assert.Equal(t, test.expectedErr, err)
+		})
+	}
+}

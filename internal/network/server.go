@@ -3,7 +3,7 @@ package network
 import (
 	"errors"
 	"fmt"
-	"inmemorykvdb/pkg/sync/serversync"
+	"inmemorykvdb/pkg/concurrency/serversync"
 	"net"
 	"sync"
 	"time"
@@ -13,6 +13,8 @@ import (
 
 const (
 	tcp = "tcp"
+
+	defaultMaxBufferSize = 4096
 )
 
 type HandleRequest = func([]byte) []byte
@@ -40,10 +42,14 @@ func NewServer(address string, logger *zap.Logger, options ...ServerOption) (*Se
 		return nil, fmt.Errorf("failed to connect to address: %s", address)
 	}
 
-	server := &Server{Listener: listener}
+	server := &Server{Listener: listener, Logger: logger}
 
 	for _, option := range options {
 		option(server)
+	}
+
+	if server.MaxBufferSize == 0 {
+		server.MaxBufferSize = defaultMaxBufferSize
 	}
 
 	if server.MaxConnections != 0 {

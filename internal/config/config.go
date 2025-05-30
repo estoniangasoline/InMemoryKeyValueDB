@@ -9,10 +9,11 @@ import (
 )
 
 type Config struct {
-	Engine    *EngineConfig  `yaml:"engine"`
-	Network   *NetworkConfig `yaml:"network"`
-	Logging   *LoggingConfig `yaml:"logging"`
-	WalConfig *WalConfig     `yaml:"wal"`
+	Engine      *EngineConfig  `yaml:"engine"`
+	Network     *NetworkConfig `yaml:"network"`
+	Logging     *LoggingConfig `yaml:"logging"`
+	WalConfig   *WalConfig     `yaml:"wal"`
+	Replication *ReplicaConfig `yaml:"replication"`
 }
 
 func NewConfig(reader io.Reader) (*Config, error) {
@@ -60,4 +61,16 @@ type WalConfig struct {
 	MaxSegmentSize string        `yaml:"max_segment_size"`
 	DataDirectory  string        `yaml:"data_directory"`
 	FileName       string        `yaml:"file_name"`
+}
+
+type ReplicaConfig struct {
+	ReplicaType   string        `yaml:"replica_type"`
+	MasterAddress string        `yaml:"master_address"`
+	SyncInterval  time.Duration `yaml:"sync_interval"`
+}
+
+type ClientConfig struct {
+	Address        string
+	MaxMessageSize int
+	Timeout        time.Duration
 }

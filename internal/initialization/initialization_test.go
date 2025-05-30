@@ -40,7 +40,20 @@ func Test_NewInitalizer(t *testing.T) {
 
 				Logging: &config.LoggingConfig{
 					Level:  "info",
-					Output: "logging.txt",
+					Output: "C:/go/InMemoryKeyValueDB/test/log/logging.txt",
+				},
+
+				WalConfig: &config.WalConfig{
+					BatchSize:      4096,
+					BatchTimeout:   time.Second,
+					MaxSegmentSize: "2MB",
+					DataDirectory:  "C:/go/InMemoryKeyValueDB/test/init/",
+					FileName:       "wal",
+				},
+
+				Replication: &config.ReplicaConfig{
+					ReplicaType:   master,
+					MasterAddress: ":8080",
 				},
 			},
 

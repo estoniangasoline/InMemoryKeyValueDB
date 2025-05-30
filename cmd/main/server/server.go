@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"inmemorykvdb/internal/cli"
 	"inmemorykvdb/internal/config"
 	"inmemorykvdb/internal/initialization"
 	"os"
@@ -12,7 +13,7 @@ var configFile = os.Getenv("CONFIG_FILE_NAME")
 
 func main() {
 
-	cnfg := &config.Config{}
+	cnfg := cli.ParseServerConfig()
 
 	if configFile != "" {
 		file, err := os.ReadFile(configFile)

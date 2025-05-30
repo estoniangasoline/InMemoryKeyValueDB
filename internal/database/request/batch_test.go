@@ -81,7 +81,7 @@ func Test_ParseBatch(t *testing.T) {
 
 			data, err := batch.ParseBatch()
 
-			assert.Equal(t, test.expectedData, *data)
+			assert.Equal(t, test.expectedData, data)
 			assert.Equal(t, test.expectedErr, err)
 		})
 	}
@@ -140,9 +140,86 @@ func Test_LoadData(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			batch := NewBatch(testMaxSize)
 
-			err := batch.LoadData(&test.data)
+			err := batch.LoadData(test.data)
 
 			assert.Equal(t, test.expectedRequests, batch.Data)
+			assert.Equal(t, test.expectedErr, err)
+		})
+	}
+}
+
+func Test_LoadFilesToBatch(t *testing.T) {
+	type testCase struct {
+		name string
+
+		fileNames []string
+		data      []string
+
+		expectedBatch []*Request
+		expectedErr   error
+	}
+
+	testCases := []testCase{
+		{
+			name: "correct loading",
+
+			fileNames: []string{"wal0.log", "wal1.log", "wal2.log"},
+			data:      []string{"SET biba boba" + EndElement, "SET biba boba" + EndElement, "DEL biba" + EndElement},
+
+			expectedBatch: []*Request{
+				{
+					RequestType: commands.SetCommand,
+					Args:        []string{"biba", "boba"},
+				},
+
+				{
+					RequestType: commands.SetCommand,
+					Args:        []string{"biba", "boba"},
+				},
+
+				{
+					RequestType: commands.DelCommand,
+					Args:        []string{"biba"},
+				},
+			},
+			expectedErr: nil,
+		},
+
+		{
+			name: "loading with errors",
+
+			fileNames: []string{"wal0.log", "wal1.log", "wal2.log"},
+
+			data: []string{"SET biba boba" + EndElement, "SET biba boba" + EndElement, "lol boba" + EndElement},
+
+			expectedBatch: []*Request{
+				{
+					RequestType: commands.SetCommand,
+					Args:        []string{"biba", "boba"},
+				},
+
+				{
+					RequestType: commands.SetCommand,
+					Args:        []string{"biba", "boba"},
+				},
+			},
+			expectedErr: errors.New("has files with errors: wal2.log"),
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			dataInBytes := make([][]byte, len(test.data))
+
+			for i := range dataInBytes {
+				dataInBytes[i] = []byte(test.data[i])
+			}
+
+			batch := NewBatch(1000)
+
+			err := batch.LoadFilesToBatch(test.fileNames, dataInBytes)
+
+			assert.Equal(t, test.expectedBatch, batch.Data)
 			assert.Equal(t, test.expectedErr, err)
 		})
 	}

@@ -28,7 +28,7 @@ func Test_createReadLevel(t *testing.T) {
 			logger: zap.NewNop(),
 			cnfg:   nil,
 
-			expectedNilObj: false,
+			expectedNilObj: true,
 			expectedErr:    nil,
 		},
 

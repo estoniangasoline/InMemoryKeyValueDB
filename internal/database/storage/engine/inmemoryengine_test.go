@@ -13,7 +13,8 @@ func Test_NewInMemoryEngine(t *testing.T) {
 	type testCase struct {
 		testName string
 
-		logger *zap.Logger
+		logger  *zap.Logger
+		options []EngineOption
 
 		expectedNilObj bool
 		expectedErr    error
@@ -23,7 +24,17 @@ func Test_NewInMemoryEngine(t *testing.T) {
 		{
 			testName: "Correct engine",
 
-			logger: &zap.Logger{},
+			logger: zap.NewNop(),
+
+			expectedNilObj: false,
+			expectedErr:    nil,
+		},
+
+		{
+			testName: "Correct engine with options",
+
+			logger:  zap.NewNop(),
+			options: []EngineOption{WithPartitions(10, 10)},
 
 			expectedNilObj: false,
 			expectedErr:    nil,
@@ -55,35 +66,17 @@ func Test_NewInMemoryEngine(t *testing.T) {
 
 func Test_SetEngine(t *testing.T) {
 
-	type testCase struct {
-		testName string
+	engine, _ := NewInMemoryEngine(zap.NewNop())
 
-		key   string
-		value string
+	key := "key"
+	value := "value"
 
-		expectedErr error
-	}
+	engine.SET(key, value)
 
-	testCases := []testCase{
-		{
-			testName: "Set value in correct engine",
+	actual, found := engine.GET(key)
 
-			key:   "Qwerty",
-			value: "Asdfgh",
-
-			expectedErr: nil,
-		},
-	}
-
-	for _, test := range testCases {
-		t.Run(test.testName, func(t *testing.T) {
-			engine, _ := NewInMemoryEngine(zap.NewNop())
-
-			err := engine.SET(test.key, test.value)
-
-			assert.Equal(t, test.expectedErr, err)
-		})
-	}
+	assert.Equal(t, value, actual)
+	assert.True(t, found)
 }
 
 func Test_GetEngine(t *testing.T) {
@@ -97,7 +90,7 @@ func Test_GetEngine(t *testing.T) {
 		setValue string
 
 		expectedValue string
-		expectedErr   error
+		isFound       bool
 	}
 
 	testCases := []testCase{
@@ -110,7 +103,7 @@ func Test_GetEngine(t *testing.T) {
 			setValue:      "Qwerty",
 			expectedValue: "Qwerty",
 
-			expectedErr: nil,
+			isFound: true,
 		},
 
 		{
@@ -122,7 +115,7 @@ func Test_GetEngine(t *testing.T) {
 			setValue:      "Qwerty",
 			expectedValue: "",
 
-			expectedErr: errors.New("value not found"),
+			isFound: false,
 		},
 	}
 
@@ -133,10 +126,10 @@ func Test_GetEngine(t *testing.T) {
 
 			engine.SET(test.setKey, test.setValue)
 
-			actualValue, actualErr := engine.GET(test.getKey)
+			actualValue, actualFound := engine.GET(test.getKey)
 
 			assert.Equal(t, actualValue, test.expectedValue)
-			assert.Equal(t, actualErr, test.expectedErr)
+			assert.Equal(t, actualFound, test.isFound)
 		})
 	}
 }
@@ -150,8 +143,6 @@ func Test_DelEngine(t *testing.T) {
 		setValue string
 
 		delKey string
-
-		expectedErr error
 	}
 
 	testCases := []testCase{
@@ -162,8 +153,6 @@ func Test_DelEngine(t *testing.T) {
 			setValue: "ASDFG",
 
 			delKey: "Qwerty",
-
-			expectedErr: nil,
 		},
 
 		{
@@ -173,8 +162,6 @@ func Test_DelEngine(t *testing.T) {
 			setValue: "ASDFG",
 
 			delKey: "Poiu",
-
-			expectedErr: nil,
 		},
 	}
 
@@ -184,9 +171,11 @@ func Test_DelEngine(t *testing.T) {
 
 			engine.SET(test.setKey, test.setValue)
 
-			actualErr := engine.DEL(test.delKey)
+			engine.DEL(test.delKey)
 
-			assert.Equal(t, actualErr, test.expectedErr)
+			_, found := engine.GET(test.delKey)
+
+			assert.False(t, found)
 		})
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
 
@@ -73,31 +74,16 @@ func Test_NewWriteLevel(t *testing.T) {
 	}
 }
 
-func Test_checkFileSize(t *testing.T) {
-	t.Parallel()
-
-	wl, _ := NewWriteLevel(zap.NewNop())
-
-	err := wl.checkFileSize()
-	assert.Nil(t, err)
-
-	wl.CurrentFile.Write(make([]byte, wl.fileMaxSize))
-
-	err = wl.checkFileSize()
-	assert.Nil(t, err)
-}
-
 func Test_createFile(t *testing.T) {
 	t.Parallel()
 
 	wl, _ := NewWriteLevel(zap.NewNop())
 
-	err := wl.createFile()
+	file, err := wl.createFile()
 
-	assert.Nil(t, err)
+	require.Nil(t, err)
 
-	var stringInd = strconv.Itoa(wl.nextFileIndex - 1)
-	_, err = os.Stat(wl.fileName + stringInd + fileExtension)
+	_, err = file.Stat()
 
 	assert.NotEqual(t, os.ErrNotExist, err)
 }
@@ -128,18 +114,18 @@ func Test_Write(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name: "zero data",
-
-			data: []byte{},
-
-			expectedErr: errors.New("data is empty"),
-		},
-		{
 			name: "correct data",
 
 			data: []byte("SET BIBA BOBA"),
 
 			expectedErr: nil,
+		},
+		{
+			name: "zero data",
+
+			data: []byte{},
+
+			expectedErr: errors.New("data is empty"),
 		},
 	}
 
@@ -147,14 +133,17 @@ func Test_Write(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			wl, _ := NewWriteLevel(zap.NewNop())
+			wl, _ := NewWriteLevel(zap.NewNop(), WithFilePath("C:/go/InMemoryKeyValueDB/test/wal/wl/"))
 
-			_, err := wl.Write(&test.data)
+			_, err := wl.Write(test.data)
 
-			actualData, _ := os.ReadFile(wl.CurrentFile.Name())
-
-			assert.Equal(t, test.data, actualData)
 			assert.Equal(t, test.expectedErr, err)
+
+			if err == nil {
+				actualData, _ := os.ReadFile("C:/go/InMemoryKeyValueDB/test/wal/wl/write_ahead1.log")
+				assert.Equal(t, test.data, actualData)
+				os.Remove("C:/go/InMemoryKeyValueDB/test/wal/wl/write_ahead1.log")
+			}
 		})
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -94,13 +93,21 @@ func Test_findFiles(t *testing.T) {
 		expectedErr       error
 	}
 
+	dir := "C:\\go\\InMemoryKeyValueDB\\test\\readlevel\\findfiles\\"
+
+	fileNames := []string{"wal1.log", "wal2.log", "wal3.log", "wal4.log"}
+
+	for _, name := range fileNames {
+		os.Create(dir + name)
+	}
+
 	testCases := []testCase{
 		{
 			name: "correct pattern",
 
-			pattern: "read",
+			pattern: "wal",
 
-			expectedFileNames: []string{"readlevel.go", "readlevel_test.go", "readleveloptions.go", "readleveloptions_test.go"},
+			expectedFileNames: fileNames,
 			expectedErr:       nil,
 		},
 
@@ -125,17 +132,26 @@ func Test_findFiles(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			rl := &readLevel{pattern: test.pattern}
+			rl := &readLevel{pattern: test.pattern, directory: dir}
 
-			err := rl.findFiles()
+			names, err := rl.findFiles()
 
-			assert.Equal(t, test.expectedFileNames, rl.fileNames)
+			for i, name := range names {
+				assert.Equal(t, dir+fileNames[i], name)
+			}
+
 			assert.Equal(t, test.expectedErr, err)
 		})
+	}
+
+	for _, name := range fileNames {
+		os.Remove(dir + name)
 	}
 }
 
 func Test_Read(t *testing.T) {
+	dir := "C:\\go\\InMemoryKeyValueDB\\test\\readlevel\\read\\"
+
 	t.Parallel()
 
 	type testCase struct {
@@ -158,32 +174,35 @@ func Test_Read(t *testing.T) {
 			expectedData: [][]byte{{'1', '2', '3', '4', '5'}, {'1', '2', '3', '4', '5'}, {'1', '2', '3', '4', '5'}},
 			expectedErr:  nil,
 		},
-		{
-			name: "reading out of range",
-
-			pattern:     "law",
-			dataToWrite: [][]byte{[]byte(strings.Repeat("1", 10000))},
-
-			expectedData: [][]byte{},
-			expectedErr:  errors.New("could not to read the files: law0.log "),
-		},
 	}
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 
+			names := make([]string, len(test.dataToWrite))
+
 			for i, data := range test.dataToWrite {
 				strDig := strconv.Itoa(i)
-				fl, _ := os.Create(test.pattern + strDig + ".log")
+
+				name := dir + test.pattern + strDig + ".log"
+				names[i] = name
+
+				fl, _ := os.Create(name)
+
 				fl.Write(data)
+				fl.Close()
 			}
 
-			rl, _ := NewReadLevel(zap.NewNop(), test.pattern)
+			rl, _ := NewReadLevel(zap.NewNop(), test.pattern, WithDirectory(dir))
 
 			actualData, err := rl.Read()
 
-			assert.Equal(t, test.expectedData, *actualData)
+			assert.Equal(t, test.expectedData, actualData)
 			assert.Equal(t, test.expectedErr, err)
+
+			for _, name := range names {
+				os.Remove(name)
+			}
 		})
 	}
 }

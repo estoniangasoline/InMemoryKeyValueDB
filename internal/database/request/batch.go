@@ -2,10 +2,13 @@ package request
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 )
 
 const (
-	intSize = 4
+	intSize      = 4
+	delimElement = ' '
 )
 
 type Batch struct {
@@ -28,14 +31,37 @@ func (b *Batch) Add(req *Request) {
 	b.Data = append(b.Data, req)
 }
 
-func (b *Batch) LoadData(data *[]byte) error {
+func (b *Batch) LoadFilesToBatch(fileNames []string, files [][]byte) error {
+
+	errorFiles := &strings.Builder{}
+
+	for i, filedata := range files {
+		err := b.LoadData(filedata)
+
+		if err != nil {
+			errorFiles.Write([]byte(fileNames[i]))
+			errorFiles.WriteByte(delimElement)
+			continue
+		}
+	}
+
+	if errorFiles.String() != "" {
+		strErr := errorFiles.String()
+		strErr = strErr[:len(strErr)-1]
+		return fmt.Errorf("has files with errors: %s", strErr)
+	}
+
+	return nil
+}
+
+func (b *Batch) LoadData(data []byte) error {
 	var startIndex int
 
 	var hasUnparsedRequests bool
 
-	for i, elem := range *data {
+	for i, elem := range data {
 		if string([]byte{elem}) == EndElement {
-			unparsed, err := NewRequest(string((*data)[startIndex:i]))
+			unparsed, err := NewRequest(string(data[startIndex:i]))
 			startIndex = i + 1
 
 			if err == nil {
@@ -53,7 +79,7 @@ func (b *Batch) LoadData(data *[]byte) error {
 	return nil
 }
 
-func (b *Batch) ParseBatch() (*[]byte, error) {
+func (b *Batch) ParseBatch() ([]byte, error) {
 	byteBuffer := make([]byte, 0, b.ByteSize)
 
 	hasUnparsedRequests := false
@@ -69,10 +95,10 @@ func (b *Batch) ParseBatch() (*[]byte, error) {
 	}
 
 	if hasUnparsedRequests {
-		return &byteBuffer, errors.New("some requests has not parsed")
+		return byteBuffer, errors.New("some requests has not parsed")
 	}
 
-	return &byteBuffer, nil
+	return byteBuffer, nil
 }
 
 func (b *Batch) IsFilled() bool {

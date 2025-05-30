@@ -13,13 +13,17 @@ const (
 	defaultMaxSegSize = 1000
 )
 
-func createWriteLevel(logger *zap.Logger, cnfg *config.WalConfig) (writingLayer, error) {
+func createWriteLevel(logger *zap.Logger, cnfg *config.WalConfig, replicaCnfg *config.ReplicaConfig) (writingLayer, error) {
 	if logger == nil {
 		return nil, errors.New("logger is nil")
 	}
 
+	if replicaCnfg != nil && replicaCnfg.ReplicaType == slave {
+		return nil, nil
+	}
+
 	if cnfg == nil {
-		return writelevel.NewWriteLevel(logger)
+		return nil, nil
 	}
 
 	maxSegSize := defaultMaxSegSize * defaultMultiply

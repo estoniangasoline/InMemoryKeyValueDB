@@ -22,8 +22,6 @@ func Test_NewWal(t *testing.T) {
 	type testCase struct {
 		name string
 
-		writer  writingLayer
-		reader  readingLayer
 		logger  *zap.Logger
 		options []WalOptions
 
@@ -31,29 +29,27 @@ func Test_NewWal(t *testing.T) {
 		expectedErr    error
 	}
 
-	wl, _ := writelevel.NewWriteLevel(zap.NewNop())
-	rl, _ := readlevel.NewReadLevel(zap.NewNop(), "wal")
+	dir := "C:\\go\\InMemoryKeyValueDB\\test\\wal\\newwal\\"
+
+	wl, _ := writelevel.NewWriteLevel(zap.NewNop(), writelevel.WithFilePath(dir))
+	rl, _ := readlevel.NewReadLevel(zap.NewNop(), "wal", readlevel.WithDirectory(dir))
 
 	testCases := []testCase{
 		{
-			name: "correct wal",
-
-			writer: wl,
-			reader: rl,
+			name:   "correct wal",
 			logger: zap.NewNop(),
 			options: []WalOptions{
 				WithBatchSize(100),
 				WithBatchTimeout(30),
+				WithReader(rl),
+				WithWriter(wl),
 			},
 
 			expectedNilObj: false,
 			expectedErr:    nil,
 		},
 		{
-			name: "default wal",
-
-			writer:  wl,
-			reader:  rl,
+			name:    "default wal",
 			logger:  zap.NewNop(),
 			options: []WalOptions{},
 
@@ -61,32 +57,7 @@ func Test_NewWal(t *testing.T) {
 			expectedErr:    nil,
 		},
 		{
-			name: "wal without writer",
-
-			writer:  nil,
-			reader:  rl,
-			logger:  zap.NewNop(),
-			options: []WalOptions{},
-
-			expectedNilObj: true,
-			expectedErr:    errors.New("wal writer could not be a nil"),
-		},
-		{
-			name: "wal without reader",
-
-			writer:  wl,
-			reader:  nil,
-			logger:  zap.NewNop(),
-			options: []WalOptions{},
-
-			expectedNilObj: true,
-			expectedErr:    errors.New("wal reader could not be a nil"),
-		},
-		{
 			name: "wal without logger",
-
-			writer: wl,
-			reader: rl,
 
 			logger:  nil,
 			options: []WalOptions{},
@@ -100,7 +71,7 @@ func Test_NewWal(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			wal, actualErr := NewWal(test.writer, test.reader, test.logger, test.options...)
+			wal, actualErr := NewWal(test.logger, test.options...)
 
 			if test.expectedNilObj {
 				assert.Nil(t, wal)
@@ -114,11 +85,10 @@ func Test_NewWal(t *testing.T) {
 }
 
 func Test_WriteToWal(t *testing.T) {
-	wl, _ := writelevel.NewWriteLevel(zap.NewNop())
-	rl, _ := readlevel.NewReadLevel(zap.NewNop(), "wal")
-	logger := zap.NewNop()
+	dir := "C:\\go\\InMemoryKeyValueDB\\test\\wal\\writetowal\\"
+	wl, _ := writelevel.NewWriteLevel(zap.NewNop(), writelevel.WithFilePath(dir))
 
-	wal, _ := NewWal(wl, rl, logger)
+	wal, _ := NewWal(zap.NewNop(), WithWriter(wl))
 
 	go func() {
 		<-wal.requestChannel
@@ -128,30 +98,30 @@ func Test_WriteToWal(t *testing.T) {
 	wal.Write(request.Request{RequestType: commands.SetCommand, Args: []string{"biba", "boba"}})
 }
 
-func Test_writeOnDisK(t *testing.T) {
-	wl, _ := writelevel.NewWriteLevel(zap.NewNop())
-	rl, _ := readlevel.NewReadLevel(zap.NewNop(), "wal")
-	logger := zap.NewNop()
+func Test_writeOnDisk(t *testing.T) {
+	dir := "C:\\go\\InMemoryKeyValueDB\\test\\wal\\writeondisk\\"
 
-	wal, _ := NewWal(wl, rl, logger, WithBatchSize(100))
+	wl, _ := writelevel.NewWriteLevel(zap.NewNop(), writelevel.WithFilePath(dir))
+
+	wal, _ := NewWal(zap.NewNop(), WithBatchSize(100), WithWriter(wl))
 
 	wal.batch.Data = append(wal.batch.Data, &request.Request{RequestType: commands.DelCommand, Args: []string{"biba"}})
 	expectedData := "DEL biba\n"
 
 	wal.writeOnDisk()
 
-	data, _ := os.ReadFile(wl.CurrentFile.Name())
+	data, _ := os.ReadFile(wl.LastFileName)
 	assert.Equal(t, expectedData, string(data))
 }
 
 func Test_handleEvents(t *testing.T) {
-	wl, _ := writelevel.NewWriteLevel(zap.NewNop())
-	rl, _ := readlevel.NewReadLevel(zap.NewNop(), "wal")
-	logger := zap.NewNop()
+	dir := "C:\\go\\InMemoryKeyValueDB\\test\\wal\\handleevents\\"
 
-	wal, _ := NewWal(wl, rl, logger, WithBatchSize(100))
+	wl, _ := writelevel.NewWriteLevel(zap.NewNop(), writelevel.WithFilePath(dir))
 
-	wal.StartWAL()
+	wal, _ := NewWal(zap.NewNop(), WithBatchSize(100), WithWriter(wl))
+
+	wal.startWAL()
 
 	wal.Write(request.Request{RequestType: commands.SetCommand, Args: []string{"biba", "boba"}})
 
@@ -163,6 +133,8 @@ func Test_handleEvents(t *testing.T) {
 }
 
 func Test_Read(t *testing.T) {
+
+	dir := "C:\\go\\InMemoryKeyValueDB\\test\\wal\\read\\"
 
 	type testCase struct {
 		name string
@@ -210,18 +182,15 @@ func Test_Read(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 
-			wl, _ := writelevel.NewWriteLevel(zap.NewNop(), writelevel.WithFileName("law"))
-			rl, _ := readlevel.NewReadLevel(zap.NewNop(), "law")
+			wl, _ := writelevel.NewWriteLevel(zap.NewNop(), writelevel.WithFileName("wal"), writelevel.WithFilePath(dir))
+			rl, _ := readlevel.NewReadLevel(zap.NewNop(), "wal", readlevel.WithDirectory(dir))
 			logger := zap.NewNop()
 
-			os.WriteFile(wl.CurrentFile.Name(), test.data, 0644)
+			wl.Write(test.data)
 
-			defer func() {
-				wl.CurrentFile.Close()
-				os.Remove(wl.CurrentFile.Name())
-			}()
+			defer os.Remove(wl.LastFileName)
 
-			wal, _ := NewWal(wl, rl, logger)
+			wal, _ := NewWal(logger, WithReader(rl))
 
 			batch := wal.Read()
 

@@ -27,6 +27,10 @@ wal:
   max_segment_size: "10MB"
   data_directory: "/data/spider/wal"
   file_name: "write_ahead_log"
+replication:
+  replica_type: "slave"
+  master_address: "127.0.0.1:3232"
+  sync_interval: "1s"
 `
 )
 
@@ -71,6 +75,11 @@ func Test_NewConfig(t *testing.T) {
 					MaxSegmentSize: "10MB",
 					DataDirectory:  "/data/spider/wal",
 					FileName:       "write_ahead_log",
+				},
+				Replication: &ReplicaConfig{
+					ReplicaType:   "slave",
+					MasterAddress: "127.0.0.1:3232",
+					SyncInterval:  time.Second,
 				},
 			},
 		},

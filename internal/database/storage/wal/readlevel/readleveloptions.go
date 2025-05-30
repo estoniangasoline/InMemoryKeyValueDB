@@ -14,3 +14,14 @@ func WithFileMaxSize(maxSize int) readLevelOptions {
 		return nil
 	}
 }
+
+func WithDirectory(dir string) readLevelOptions {
+	return func(rl *readLevel) error {
+		if dir == "" {
+			return errors.New("directory could not be a empty string")
+		}
+
+		rl.directory = dir
+		return nil
+	}
+}

@@ -10,11 +10,11 @@ import (
 )
 
 type readingLayer interface {
-	Read() (*[][]byte, error)
+	Read() ([][]byte, error)
 }
 
 type writingLayer interface {
-	Write(*[]byte) (int, error)
+	Write([]byte) (int, error)
 }
 
 const (
@@ -37,23 +37,13 @@ type WAL struct {
 	logger *zap.Logger
 }
 
-func NewWal(writer writingLayer, reader readingLayer, logger *zap.Logger, walOptions ...WalOptions) (*WAL, error) {
+func NewWal(logger *zap.Logger, walOptions ...WalOptions) (*WAL, error) {
 	if logger == nil {
 		return nil, errors.New("logger could not be nil")
 	}
 
-	if writer == nil {
-		return nil, errors.New("wal writer could not be a nil")
-	}
-
-	if reader == nil {
-		return nil, errors.New("wal reader could not be a nil")
-	}
-
 	wal := &WAL{}
 
-	wal.writer = writer
-	wal.reader = reader
 	wal.logger = logger
 
 	for _, option := range walOptions {
@@ -71,10 +61,17 @@ func NewWal(writer writingLayer, reader readingLayer, logger *zap.Logger, walOpt
 	wal.blockChannel = make(chan struct{})
 	wal.requestChannel = make(chan request.Request)
 
+	wal.startWAL()
+
 	return wal, nil
 }
 
-func (w *WAL) StartWAL() {
+func (w *WAL) startWAL() {
+	if w.writer == nil {
+		w.logger.Debug("could not start wal without write layer")
+		return
+	}
+
 	w.logger.Debug("started handle events of wal")
 	go w.handleEvents()
 }
@@ -127,6 +124,11 @@ func (w *WAL) Write(req request.Request) {
 }
 
 func (w *WAL) Read() *request.Batch {
+	if w.reader == nil {
+		w.logger.Debug("could not read without reader")
+		return nil
+	}
+
 	w.logger.Debug("started read from wal")
 	data, err := w.reader.Read()
 
@@ -134,10 +136,14 @@ func (w *WAL) Read() *request.Batch {
 		w.logger.Error(err.Error())
 	}
 
-	batch := request.NewBatch(len(*data) * len((*data)[0]))
+	if len(data) == 0 {
+		return nil
+	}
 
-	for _, arr := range *data {
-		err := batch.LoadData(&arr)
+	batch := request.NewBatch(len(data) * len((data)[0]))
+
+	for _, arr := range data {
+		err := batch.LoadData(arr)
 		if err != nil {
 			w.logger.Error(err.Error())
 		}

@@ -13,23 +13,27 @@ import (
 )
 
 type engineLayer interface {
-	SET(key string, value string) error
-	GET(key string) (string, error)
-	DEL(key string) error
+	SET(key string, value string)
+	GET(key string) (string, bool)
+	DEL(key string)
 }
 
 type WAL interface {
-	StartWAL()
 	Write(req request.Request)
 	Read() *request.Batch
 }
 
 type readingLayer interface {
-	Read() (*[][]byte, error)
+	Read() ([][]byte, error)
 }
 
 type writingLayer interface {
-	Write(*[]byte) (int, error)
+	Write([]byte) (int, error)
+}
+
+type replica interface {
+	IsMaster() bool
+	DataChan() chan *request.Batch
 }
 
 type Initializer struct {
@@ -58,7 +62,7 @@ func NewInitializer(cnfg *config.Config) (*Initializer, error) {
 		return nil, err
 	}
 
-	wl, err := createWriteLevel(logger, cnfg.WalConfig)
+	wl, err := createWriteLevel(logger, cnfg.WalConfig, cnfg.Replication)
 
 	if err != nil {
 		return nil, err
@@ -76,7 +80,13 @@ func NewInitializer(cnfg *config.Config) (*Initializer, error) {
 		return nil, err
 	}
 
-	storage, err := createStorage(engine, writeAheadLog, logger)
+	repl, err := createReplica(logger, cnfg.Replication, cnfg.WalConfig)
+
+	if err != nil {
+		return nil, err
+	}
+
+	storage, err := createStorage(engine, writeAheadLog, logger, repl)
 
 	if err != nil {
 		return nil, err

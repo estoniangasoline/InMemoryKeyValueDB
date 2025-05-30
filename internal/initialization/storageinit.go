@@ -2,12 +2,13 @@ package initialization
 
 import (
 	"errors"
+	"inmemorykvdb/internal/database/request"
 	"inmemorykvdb/internal/database/storage"
 
 	"go.uber.org/zap"
 )
 
-func createStorage(engine engineLayer, wal WAL, logger *zap.Logger) (*storage.Storage, error) {
+func createStorage(engine engineLayer, wal WAL, logger *zap.Logger, replication replica) (*storage.Storage, error) {
 	if logger == nil {
 		return nil, errors.New("logger is nil")
 	}
@@ -16,7 +17,16 @@ func createStorage(engine engineLayer, wal WAL, logger *zap.Logger) (*storage.St
 		return nil, errors.New("engine is nil")
 	}
 
-	storage, err := storage.NewStorage(logger, storage.WithEngine(engine), storage.WithWal(wal))
+	var dataChan chan *request.Batch
+
+	if replication != nil && !replication.IsMaster() {
+		dataChan = replication.DataChan()
+	}
+
+	storage, err := storage.NewStorage(logger, engine,
+		storage.WithWal(wal),
+		storage.WithReplica(replication),
+		storage.WithDataChan(dataChan))
 
 	return storage, err
 }

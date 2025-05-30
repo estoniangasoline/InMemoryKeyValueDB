@@ -17,3 +17,15 @@ func WithBatchTimeout(batchTimeout time.Duration) WalOptions {
 		w.Timeout = batchTimeout
 	}
 }
+
+func WithReader(reader readingLayer) WalOptions {
+	return func(w *WAL) {
+		w.reader = reader
+	}
+}
+
+func WithWriter(writer writingLayer) WalOptions {
+	return func(w *WAL) {
+		w.writer = writer
+	}
+}

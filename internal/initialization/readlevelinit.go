@@ -17,8 +17,9 @@ func createReadLevel(logger *zap.Logger, cnfg *config.WalConfig) (readingLayer, 
 	if logger == nil {
 		return nil, errors.New("logger is nil")
 	}
+
 	if cnfg == nil {
-		return readlevel.NewReadLevel(logger, defaultPattern)
+		return nil, nil
 	}
 
 	maxSegSize := defaultMaxSegSize * defaultMultiply
@@ -32,7 +33,8 @@ func createReadLevel(logger *zap.Logger, cnfg *config.WalConfig) (readingLayer, 
 		}
 	}
 
-	rl, err := readlevel.NewReadLevel(logger, cnfg.FileName, readlevel.WithFileMaxSize(maxSegSize))
+	rl, err := readlevel.NewReadLevel(logger, cnfg.FileName,
+		readlevel.WithFileMaxSize(maxSegSize), readlevel.WithDirectory(cnfg.DataDirectory))
 
 	if err != nil {
 		return nil, err

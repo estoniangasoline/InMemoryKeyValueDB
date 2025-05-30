@@ -15,7 +15,7 @@ const (
 
 	defaultLevel    = zapcore.InfoLevel
 	defaultEncoding = "json"
-	defaultOutput   = "spider.log"
+	defaultOutput   = "C:/go/InMemoryKeyValueDB/test/log/pretty.log"
 )
 
 func createLogger(config *config.LoggingConfig) (*zap.Logger, error) {

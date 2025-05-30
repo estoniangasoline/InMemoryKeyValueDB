@@ -6,18 +6,15 @@ import (
 	"inmemorykvdb/internal/cli"
 	"inmemorykvdb/internal/network"
 	"os"
-	"time"
-)
-
-const (
-	address        = ":8080"
-	maxMessageSize = 4096
-	timeOut        = 0 * time.Second
 )
 
 func main() {
 
-	client, err := network.NewClient(address, network.WithClientTimeout(timeOut), network.WithClientMaxBufferSize(maxMessageSize))
+	clientCnfg := cli.ParseClientOptions()
+
+	client, err := network.NewClient(clientCnfg.Address,
+		network.WithClientTimeout(clientCnfg.Timeout),
+		network.WithClientMaxBufferSize(clientCnfg.MaxMessageSize))
 
 	if err != nil {
 		fmt.Println(err.Error())

@@ -9,32 +9,19 @@ import (
 )
 
 func createWal(cnfg *config.WalConfig, logger *zap.Logger, writeLevel writingLayer, readLevel readingLayer) (WAL, error) {
+	if cnfg == nil {
+		return nil, nil
+	}
+
 	if logger == nil {
 		return nil, errors.New("nil logger")
 	}
 
-	if writeLevel == nil {
-		return nil, errors.New("nil write level")
-	}
-
-	if readLevel == nil {
-		return nil, errors.New("nil read level")
-	}
-
-	if cnfg == nil {
-		return wal.NewWal(writeLevel, readLevel, logger)
-	}
-
-	writeAheadLog, err := wal.NewWal(
-		writeLevel,
-		readLevel,
+	return wal.NewWal(
 		logger,
 		wal.WithBatchSize(cnfg.BatchSize),
-		wal.WithBatchTimeout(cnfg.BatchTimeout))
-
-	if err != nil {
-		return nil, err
-	}
-
-	return writeAheadLog, nil
+		wal.WithBatchTimeout(cnfg.BatchTimeout),
+		wal.WithWriter(writeLevel),
+		wal.WithReader(readLevel),
+	)
 }
